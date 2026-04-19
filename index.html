@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPU Global Tracking - Universal Postal Union</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --primary: #1e3c72;
+            --secondary: #2a5298;
+            --accent: #d4af37;
+            --success: #28a745;
+            --warning: #ffc107;
+            --danger: #dc3545;
+            --info: #17a2b8;
+            --light: #f8f9fa;
+            --dark: #343a40;
+        }
+        
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        /* Header */
+        .header {
+            background: rgba(255,255,255,0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px 30px;
+            box-shadow: 0 2px 20px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .logo {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--accent) 0%, #f4d03f 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .brand h1 {
+            color: var(--primary);
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+        }
+        
+        .brand p {
+            color: #6c757d;
+            font-size: 12px;
+            margin: 0;
+            letter-spacing: 1px;
+        }
+        
+        .header-actions {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-header {
+            padding: 10px 20px;
+            border: 2px solid var(--primary);
+            background: transparent;
+            color: var(--primary);
+            border-radius: 25px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-header:hover {
+            background: var(--primary);
+            color: white;
+        }
+        
+        /* Main Container */
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 30px;
+        }
+        
+        /* Tracking Hero Section */
+        .tracking-hero {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .tracking-hero h2 {
+            color: var(--primary);
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .tracking-hero p {
+            color: #6c757d;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .tracking-input-group {
+            display: flex;
+            gap: 15px;
+            max-width: 700px;
+            margin: 0 auto;
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 16px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .tracking-input {
+            flex: 1;
+            padding: 16px 24px;
+            border: none;
+            background: transparent;
+            font-size: 18px;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+            outline: none;
+        }
+        
+        .tracking-input::placeholder {
+            text-transform: none;
+            font-family: 'Segoe UI', sans-serif;
+            color: #adb5bd;
+        }
+        
+        .btn-track {
+            padding: 16px 40px;
+            background: linear-gradient(135deg, var(--accent) 0%, #f4d03f 100%);
+            color: var(--primary);
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .btn-track:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(212,175,55,0.4);
+        }
+        
+        /* Tracking Result Section */
+        .tracking-result {
+            display: none;
+            animation: fadeIn 0.5s;
+        }
+        
+        .tracking-result.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        /* Status Cards */
+        .status-overview {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .status-card {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+            border-left: 5px solid var(--info);
+            transition: all 0.3s;
+        }
+        
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+        }
+        
+        .status-card.delivered { border-left-color: var(--success); }
+        .status-card.transit { border-left-color: var(--warning); }
+        .status-card.exception { border-left-color: var(--danger); }
+        
+        .status-icon {
+            width: 60px;
+            height: 60px;
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 28px;
+            margin-bottom: 15px;
+            background: #e3f2fd;
+        }
+        
+        .status-card.delivered .status-icon { background: #e8f5e9; }
+        .status-card.transit .status-icon { background: #fff3e0; }
+        
+        .status-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .status-value {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        /* Main Tracking Display */
+        .tracking-main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+        
+        @media (max-width: 1024px) {
+            .tracking-main {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Map Section */
+        .map-container {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .map-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .map-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .live-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--danger);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .live-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+        
+        #trackingMap {
+            height: 450px;
+            border-radius: 16px;
+            border: 2px solid #e9ecef;
+        }
+        
+        .route-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .route-info {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        .route-info-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            padding: 20px;
+            border-radius: 16px;
+            text-align: center;
+            border: 2px solid #e9ecef;
+        }
+        
+        .route-info-icon {
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .route-info-label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 5px;
+        }
+        
+        .route-info-value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        
+        /* Timeline Section */
+        .timeline-container {
+            background: white;
+            border-radius: 24px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .timeline-header {
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+        }
+        
+        .timeline-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .vertical-timeline {
+            position: relative;
+            padding-left: 40px;
+        }
+        
+        .vertical-timeline::before {
+            content: '';
+            position: absolute;
+            left: 15px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(to bottom, var(--success) 0%, #e9ecef 100%);
+            border-radius: 3px;
+        }
+        
+        .timeline-item {
+            position: relative;
+            padding-bottom: 30px;
+            opacity: 0.6;
+            transition: all 0.3s;
+        }
+        
+        .timeline-item.active {
+            opacity: 1;
+        }
+        
+        .timeline-item.completed {
+            opacity: 1;
+        }
+        
+        .timeline-item::before {
+            content: '';
+            position: absolute;
+            left: -33px;
+            top: 2px;
+            width: 16px;
+            height: 16px;
+            background: #fff;
+            border: 3px solid #dee2e6;
+            border-radius: 50%;
+            z-index: 2;
+        }
+        
+        .timeline-item.completed::before {
+            background: var(--success);
+            border-color: var(--success);
+        }
+        
+        .timeline-item.active::before {
+            background: var(--primary);
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(30,60,114,0.2);
+            animation: pulse-ring 2s infinite;
+        }
+        
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(30,60,114,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(30,60,114,0); }
+            100% { box-shadow: 0 0 0 0 rgba(30,60,114,0); }
+        }
+        
+        .timeline-content {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 16px;
+            border-left: 4px solid transparent;
+        }
+        
+        .timeline-item.completed .timeline-content {
+            border-left-color: var(--success);
+            background: #f0f9f4;
+        }
+        
+        .timeline-item.active .timeline-content {
+            border-left-color: var(--primary);
+            background: #e8f0fe;
+        }
+        
+        .timeline-status {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .timeline-location {
+            font-size: 14px;
+            color: #6c757d;
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .timeline-time {
+            font-size: 13px;
+            color: #adb5bd;
+        }
+        
+        /* Shipment Details */
+        .details-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .detail-panel {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        }
+        
+        .detail-panel-header {
+            font-size: 18px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        
+        .detail-label {
+            color: #6c757d;
+            font-size: 14px;
+        }
+        
+        .detail-value {
+            color: var(--primary);
+            font-weight: 600;
+            font-size: 14px;
+            text-align: right;
+        }
+        
+        .address-block {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+        }
+        
+        .address-name {
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 5px;
+        }
+        
+        .address-text {
+            color: #6c757d;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        
+        /* Customer Care */
+        .customer-care {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-top: 30px;
+            text-align: center;
+        }
+        
+        .customer-care h3 {
+            font-size: 24px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .care-number {
+            font-size: 36px;
+            font-weight: 700;
+            color: var(--accent);
+            margin: 15px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .care-hours {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        /* Error State */
+        .error-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #6c757d;
+        }
+        
+        .error-icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+            opacity: 0.5;
+        }
+        
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #e9ecef;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #333;
+            color: white;
+            padding: 16px 24px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            z-index: 3000;
+            opacity: 0;
+            transform: translateY(100px);
+            transition: all 0.3s;
+        }
+        
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        
+        /* Custom Map Markers */
+        .custom-marker {
+            background: white;
+            border-radius: 50%;
+            padding: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 3px solid var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            width: 44px;
+            height: 44px;
+        }
+        
+        .custom-marker.origin {
+            border-color: var(--success);
+        }
+        
+        .custom-marker.destination {
+            border-color: var(--danger);
+        }
+        
+        .custom-marker.current {
+            border-color: var(--primary);
+            animation: bounce 1s infinite;
+        }
+        
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+        
+        /* Footer */
+        .footer {
+            text-align: center;
+            padding: 30px;
+            color: rgba(255,255,255,0.7);
+            font-size: 14px;
+        }
+        
+        .tracking-number-display {
+            font-family: 'Courier New', monospace;
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--primary);
+            text-align: center;
+            margin-bottom: 30px;
+            letter-spacing: 2px;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            padding: 20px;
+            border-radius: 16px;
+            border: 2px dashed var(--accent);
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                padding: 15px;
+            }
+            
+            .tracking-input-group {
+                flex-direction: column;
+            }
+            
+            .btn-track {
+                width: 100%;
+                justify-content: center;
+            }
+            
+            .tracking-hero h2 {
+                font-size: 24px;
+            }
+            
+            .tracking-number-display {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-section">
+            <div class="logo">📮</div>
+            <div class="brand">
+                <h1>UPU Global Tracking</h1>
+                <p>Universal Postal Union • International Mail Tracking</p>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-header" onclick="showAdminLogin()">🔐 Admin Access</button>
+            <button class="btn-header" onclick="showHelp()">❓ Help</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Tracking Input Section -->
+        <section class="tracking-hero">
+            <h2>📦 Track Your International Shipment</h2>
+            <p>Enter your 13-digit S10 tracking number (e.g., EE123456789FR)</p>
+            
+            <div class="tracking-input-group">
+                <input 
+                    type="text" 
+                    class="tracking-input" 
+                    id="trackingInput" 
+                    placeholder="Enter tracking number (e.g., EE123456789FR)"
+                    maxlength="13"
+                    autocomplete="off"
+                >
+                <button class="btn-track" onclick="trackPackage()">
+                    <span>🔍</span> Track Now
+                </button>
+            </div>
+            
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>Searching for your package...</p>
+            </div>
+        </section>
+
+        <!-- Tracking Result Section -->
+        <div class="tracking-result" id="trackingResult">
+            <!-- Tracking Number Display -->
+            <div class="tracking-number-display" id="displayTrackingNumber">--</div>
+            
+            <!-- Status Overview Cards -->
+            <div class="status-overview" id="statusCards">
+                <!-- Dynamically populated -->
+            </div>
+            
+            <!-- Main Tracking Display: Map + Timeline -->
+            <div class="tracking-main">
+                <!-- Map Section -->
+                <div class="map-container">
+                    <div class="map-header">
+                        <div class="map-title">
+                            <span>🗺️</span> Live Shipment Location
+                        </div>
+                        <span class="live-badge" id="liveBadge">
+                            <span class="live-dot"></span> LIVE
+                        </span>
+                    </div>
+                    <div id="trackingMap"></div>
+                    <div class="route-info">
+                        <div class="route-info-card">
+                            <div class="route-info-icon">📦</div>
+                            <div class="route-info-label">Origin</div>
+                            <div class="route-info-value" id="routeOrigin">--</div>
+                        </div>
+                        <div class="route-info-card">
+                            <div class="route-info-icon">🚚</div>
+                            <div class="route-info-label">Current Status</div>
+                            <div class="route-info-value" id="routeStatus">--</div>
+                        </div>
+                        <div class="route-info-card">
+                            <div class="route-info-icon">🏠</div>
+                            <div class="route-info-label">Destination</div>
+                            <div class="route-info-value" id="routeDest">--</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Timeline Section -->
+                <div class="timeline-container">
+                    <div class="timeline-header">
+                        <div class="timeline-title">
+                            <span>📋</span> Shipment Progress
+                        </div>
+                    </div>
+                    <div class="vertical-timeline" id="shipmentTimeline">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Shipment Details -->
+            <div class="details-grid">
+                <!-- Sender Details -->
+                <div class="detail-panel">
+                    <div class="detail-panel-header">
+                        <span>📤</span> Sender Information
+                    </div>
+                    <div class="address-block" id="senderInfo">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                
+                <!-- Receiver Details -->
+                <div class="detail-panel">
+                    <div class="detail-panel-header">
+                        <span>📥</span> Receiver Information
+                    </div>
+                    <div class="address-block" id="receiverInfo">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                
+                <!-- Package Details -->
+                <div class="detail-panel">
+                    <div class="detail-panel-header">
+                        <span>📦</span> Package Details
+                    </div>
+                    <div id="packageDetails">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+                
+                <!-- Transit Details -->
+                <div class="detail-panel">
+                    <div class="detail-panel-header">
+                        <span>🌐</span> Transit Information
+                    </div>
+                    <div id="transitDetails">
+                        <!-- Dynamically populated -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Customer Care -->
+            <div class="customer-care">
+                <h3><span>📞</span> Need Help?</h3>
+                <div class="care-number" id="customerCareNumber">+1 800 123 4567</div>
+                <div class="care-hours" id="customerCareHours">Mon-Fri: 8AM - 6PM, Sat: 9AM - 2PM</div>
+            </div>
+        </div>
+        
+        <!-- Error/Not Found State -->
+        <div class="error-state" id="errorState" style="display: none;">
+            <div class="error-icon">❌</div>
+            <h3>Tracking Number Not Found</h3>
+            <p>We couldn't find any shipment with that tracking number.<br>Please check the number and try again.</p>
+        </div>
+    </div>
+    
+    <footer class="footer">
+        <p>© 2026 Universal Postal Union. All rights reserved. | UPU S10 Standard Compliant</p>
+    </footer>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span id="toastIcon">✅</span>
+        <span id="toastMessage">Operation successful</span>
+    </div>
+
+    <script>
+        // Data Storage
+        let shipments = JSON.parse(localStorage.getItem('upu_shipments')) || [];
+        let currentMap = null;
+        let routeLine = null;
+        let markers = [];
+        let animationInterval = null;
+        
+        // Country Data (NO NIGERIA)
+        const countryMap = {
+            'US': 'United States', 'GB': 'United Kingdom', 'CN': 'China',
+            'DE': 'Germany', 'FR': 'France', 'JP': 'Japan',
+            'IN': 'India', 'BR': 'Brazil', 'CA': 'Canada',
+            'AU': 'Australia', 'MX': 'Mexico', 'IT': 'Italy',
+            'ES': 'Spain', 'NL': 'Netherlands', 'AE': 'UAE',
+            'SG': 'Singapore', 'CH': 'Switzerland', 'SE': 'Sweden',
+            'NO': 'Norway', 'DK': 'Denmark', 'FI': 'Finland',
+            'BE': 'Belgium', 'AT': 'Austria', 'PL': 'Poland',
+            'CZ': 'Czech Republic', 'HU': 'Hungary', 'GR': 'Greece',
+            'PT': 'Portugal', 'IE': 'Ireland', 'NZ': 'New Zealand',
+            'ZA': 'South Africa', 'EG': 'Egypt', 'IL': 'Israel',
+            'TR': 'Turkey', 'SA': 'Saudi Arabia', 'QA': 'Qatar',
+            'KW': 'Kuwait', 'BH': 'Bahrain', 'OM': 'Oman',
+            'JO': 'Jordan', 'LB': 'Lebanon', 'CY': 'Cyprus',
+            'MT': 'Malta', 'IS': 'Iceland', 'LU': 'Luxembourg',
+            'MC': 'Monaco', 'LI': 'Liechtenstein', 'AD': 'Andorra',
+            'SM': 'San Marino', 'VA': 'Vatican City', 'MA': 'Morocco',
+            'TN': 'Tunisia', 'DZ': 'Algeria', 'LY': 'Libya',
+            'SD': 'Sudan', 'ET': 'Ethiopia', 'KE': 'Kenya',
+            'TZ': 'Tanzania', 'UG': 'Uganda', 'RW': 'Rwanda',
+            'GH': 'Ghana', 'CI': 'Ivory Coast', 'SN': 'Senegal',
+            'ML': 'Mali', 'BF': 'Burkina Faso', 'NE': 'Niger',
+            'TD': 'Chad', 'CM': 'Cameroon', 'GA': 'Gabon',
+            'CG': 'Congo', 'CD': 'DR Congo', 'AO': 'Angola',
+            'ZM': 'Zambia', 'ZW': 'Zimbabwe', 'BW': 'Botswana',
+            'NA': 'Namibia', 'MZ': 'Mozambique', 'MG': 'Madagascar',
+            'MU': 'Mauritius', 'SC': 'Seychelles', 'KM': 'Comoros',
+            'CV': 'Cape Verde', 'ST': 'Sao Tome', 'GQ': 'Equatorial Guinea',
+            'BJ': 'Benin', 'TG': 'Togo', 'SL': 'Sierra Leone',
+            'GN': 'Guinea', 'GW': 'Guinea-Bissau', 'GM': 'Gambia',
+            'LR': 'Liberia', 'MR': 'Mauritania', 'EH': 'Western Sahara'
+        };
+        
+        // City Coordinates Database
+        const cityCoords = {
+            // France
+            'Paris': [48.8566, 2.3522], 'Lyon': [45.7640, 4.8357],
+            'Marseille': [43.2965, 5.3698], 'Toulouse': [43.6047, 1.4442],
+            'Nice': [43.7102, 7.2620], 'Nantes': [47.2184, -1.5536],
+            'Strasbourg': [48.5734, 7.7521], 'Montpellier': [43.6108, 3.8767],
+            'Bordeaux': [44.8378, -0.5792], 'Lille': [50.6292, 3.0573],
+            
+            // USA
+            'New York': [40.7128, -74.0060], 'Los Angeles': [34.0522, -118.2437],
+            'Chicago': [41.8781, -87.6298], 'Houston': [29.7604, -95.3698],
+            'Miami': [25.7617, -80.1918], 'Seattle': [47.6062, -122.3321],
+            'Atlanta': [33.7490, -84.3880], 'San Francisco': [37.7749, -122.4194],
+            'Boston': [42.3601, -71.0589], 'Dallas': [32.7767, -96.7970],
+            'Denver': [39.7392, -104.9903], 'Washington': [38.9072, -77.0369],
+            'Philadelphia': [39.9526, -75.1652], 'Phoenix': [33.4484, -112.0740],
+            'San Diego': [32.7157, -117.1611], 'Detroit': [42.3314, -83.0458],
+            'Minneapolis': [44.9778, -93.2650], 'Tampa': [27.9506, -82.4572],
+            'Portland': [45.5152, -122.6784], 'Las Vegas': [36.1699, -115.1398],
+            
+            // UK
+            'London': [51.5074, -0.1278], 'Manchester': [53.4808, -2.2426],
+            'Birmingham': [52.4862, -1.8904], 'Liverpool': [53.4084, -2.9916],
+            'Leeds': [53.8008, -1.5491], 'Glasgow': [55.8609, -4.2514],
+            'Edinburgh': [55.9533, -3.1883], 'Cardiff': [51.4816, -3.1791],
+            'Belfast': [54.5973, -5.9301], 'Bristol': [51.4545, -2.5879],
+            
+            // Germany
+            'Berlin': [52.5200, 13.4050], 'Munich': [48.1351, 11.5820],
+            'Frankfurt': [50.1109, 8.6821], 'Hamburg': [53.5511, 9.9937],
+            'Cologne': [50.9375, 6.9603], 'Stuttgart': [48.7758, 9.1829],
+            
+            // China
+            'Beijing': [39.9042, 116.4074], 'Shanghai': [31.2304, 121.4737],
+            'Guangzhou': [23.1291, 113.2644], 'Shenzhen': [22.5431, 114.0579],
+            'Chengdu': [30.5728, 104.0668], 'Hangzhou': [30.2741, 120.1551],
+            
+            // Japan
+            'Tokyo': [35.6762, 139.6503], 'Osaka': [34.6937, 135.5023],
+            'Yokohama': [35.4437, 139.6380], 'Nagoya': [35.1815, 136.9066],
+            
+            // Other major cities
+            'Singapore': [1.3521, 103.8198], 'Dubai': [25.2048, 55.2708],
+            'Sydney': [-33.8688, 151.2093], 'Melbourne': [-37.8136, 144.9631],
+            'Toronto': [43.6532, -79.3832], 'Vancouver': [49.2827, -123.1207],
+            'Mumbai': [19.0760, 72.8777], 'Delhi': [28.6139, 77.2090],
+            'Sao Paulo': [-23.5505, -46.6333], 'Rio': [-22.9068, -43.1729],
+            'Cairo': [30.0444, 31.2357], 'Cape Town': [-33.9249, 18.4241],
+            'Moscow': [55.7558, 37.6173], 'Istanbul': [41.0082, 28.9784],
+            'Seoul': [37.5665, 126.9780], 'Bangkok': [13.7563, 100.5018],
+            'Jakarta': [-6.2088, 106.8456], 'Manila': [14.5995, 120.9842],
+            'Karachi': [24.8607, 67.0011], 'Lahore': [31.5204, 74.3587],
+            'Tehran': [35.6892, 51.3890], 'Baghdad': [33.3152, 44.3661],
+            'Riyadh': [24.7136, 46.6753], 'Jeddah': [21.4858, 39.1925],
+            'Kuwait City': [29.3759, 47.9774], 'Doha': [25.2854, 51.5310],
+            'Manama': [26.2285, 50.5860], 'Muscat': [23.5859, 58.4059],
+            'Amman': [31.9454, 35.9284], 'Beirut': [33.8938, 35.5018],
+            'Damascus': [33.5138, 36.2765], 'Jerusalem': [31.7683, 35.2137],
+            'Tel Aviv': [32.0853, 34.7818], 'Casablanca': [33.5731, -7.5898],
+            'Tunis': [36.8065, 10.1815], 'Algiers': [36.7538, 3.0588],
+            'Tripoli': [32.8872, 13.1913], 'Khartoum': [15.5007, 32.5599],
+            'Addis Ababa': [9.1450, 40.4897], 'Nairobi': [-1.2921, 36.8219],
+            'Dar es Salaam': [-6.7924, 39.2083], 'Kampala': [0.3476, 32.5825],
+            'Kigali': [-1.9441, 30.0619], 'Accra': [5.6037, -0.1870],
+            'Lagos': [6.5244, 3.3792], 'Abuja': [9.0765, 7.3986],
+            'Nairobi': [-1.2921, 36.8219], 'Harare': [-17.8252, 31.0335],
+            'Lusaka': [-15.3875, 28.3228], 'Gaborone': [-24.6282, 25.9231],
+            'Windhoek': [-22.5609, 17.0658], 'Maputo': [-25.9692, 32.5732]
+        };
+        
+        // Country Centers (for fallback)
+        const countryCenters = {
+            'US': [39.8283, -98.5795], 'FR': [46.2276, 2.2137],
+            'GB': [55.3781, -3.4360], 'DE': [51.1657, 10.4515],
+            'CN': [35.8617, 104.1954], 'JP': [36.2048, 138.2529],
+            'IN': [20.5937, 78.9629], 'BR': [-14.2350, -51.9253],
+            'CA': [56.1304, -106.3468], 'AU': [-25.2744, 133.7751],
+            'MX': [23.6345, -102.5528], 'IT': [41.8719, 12.5674],
+            'ES': [40.4637, -3.7492], 'NL': [52.1326, 5.2913],
+            'AE': [23.4241, 53.8478], 'SG': [1.3521, 103.8198]
+        };
+        
+        // Service Types
+        const serviceMap = {
+            'EE': 'EMS Express', 'RR': 'Registered Mail',
+            'CP': 'Parcel Post', 'LL': 'Letter Post',
+            'EA': 'E-Commerce', 'VV': 'Insured Letter'
+        };
+        
+        // Get coordinates for city
+        function getCoordinates(city, countryCode) {
+            // Direct match
+            if (cityCoords[city]) return cityCoords[city];
+            
+            // Partial match
+            const cityLower = city.toLowerCase();
+            for (let [key, coords] of Object.entries(cityCoords)) {
+                if (key.toLowerCase().includes(cityLower) || 
+                    cityLower.includes(key.toLowerCase())) {
+                    return coords;
+                }
+            }
+            
+            // Country center fallback
+            if (countryCenters[countryCode]) return countryCenters[countryCode];
+            
+            // Default
+            return [48.8566, 2.3522]; // Paris default
+        }
+        
+        // Calculate distance
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371;
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+        }
+        
+        // Track Package
+        function trackPackage() {
+            const input = document.getElementById('trackingInput').value.toUpperCase().trim();
+            
+            if (!input || input.length < 13) {
+                showToast('❌ Please enter a valid 13-digit tracking number');
+                return;
+            }
+            
+            // Show loading
+            document.getElementById('loadingIndicator').classList.add('active');
+            document.getElementById('trackingResult').classList.remove('active');
+            document.getElementById('errorState').style.display = 'none';
+            
+            // Simulate search delay
+            setTimeout(() => {
+                document.getElementById('loadingIndicator').classList.remove('active');
+                
+                // Find shipment
+                const shipment = shipments.find(s => s.trackingNumber === input);
+                
+                if (!shipment) {
+                    // Create demo shipment if not found (for testing)
+                    if (input.match(/^[A-Z]{2}\d{9}[A-Z]{2}$/)) {
+                        createDemoShipment(input);
+                    } else {
+                        document.getElementById('errorState').style.display = 'block';
+                        return;
+                    }
+                }
+                
+                const foundShipment = shipments.find(s => s.trackingNumber === input);
+                if (foundShipment) {
+                    displayTrackingResult(foundShipment);
+                }
+            }, 1500);
+        }
+        
+        // Create Demo Shipment (Paris to New York)
+        function createDemoShipment(trackingNumber) {
+            const origin = 'Paris';
+            const dest = 'New York';
+            const originCountry = 'FR';
+            const destCountry = 'US';
+            
+            const shipment = {
+                id: Date.now(),
+                trackingNumber: trackingNumber,
+                service: trackingNumber.substring(0, 2),
+                originCountry: originCountry,
+                serial: trackingNumber.substring(2, 11),
+                sender: {
+                    name: 'Jean Dupont',
+                    street: '15 Rue de la Paix',
+                    city: origin,
+                    state: 'Île-de-France',
+                    zip: '75002',
+                    country: originCountry,
+                    phone: '+33 1 42 60 00 00',
+                    email: 'sender@example.fr',
+                    coords: getCoordinates(origin, originCountry)
+                },
+                receiver: {
+                    name: 'John Smith',
+                    street: '350 Fifth Avenue',
+                    city: dest,
+                    state: 'New York',
+                    zip: '10118',
+                    country: destCountry,
+                    phone: '+1 212-736-3100',
+                    email: 'receiver@example.com',
+                    coords: getCoordinates(dest, destCountry)
+                },
+                package: {
+                    type: 'express',
+                    weight: '2.5',
+                    dimensions: '30x20x10',
+                    value: '$150.00'
+                },
+                status: 'transit',
+                currentLocation: 'Amsterdam Hub, Netherlands',
+                timeline: [
+                    {
+                        status: 'Shipment Created',
+                        location: `${origin}, ${countryMap[originCountry]}`,
+                        time: new Date(Date.now() - 4*24*60*60*1000).toISOString(),
+                        completed: true
+                    },
+                    {
+                        status: 'Picked Up',
+                        location: `${origin}, ${countryMap[originCountry]}`,
+                        time: new Date(Date.now() - 3*24*60*60*1000).toISOString(),
+                        completed: true
+                    },
+                    {
+                        status: 'Departed Origin Facility',
+                        location: `Charles de Gaulle Airport, ${countryMap[originCountry]}`,
+                        time: new Date(Date.now() - 2*24*60*60*1000).toISOString(),
+                        completed: true
+                    },
+                    {
+                        status: 'In Transit',
+                        location: 'Amsterdam Hub, Netherlands',
+                        time: new Date(Date.now() - 1*24*60*60*1000).toISOString(),
+                        completed: false,
+                        current: true
+                    },
+                    {
+                        status: 'Arrived at Destination Country',
+                        location: `JFK Airport, ${countryMap[destCountry]}`,
+                        time: new Date(Date.now() + 2*24*60*60*1000).toISOString(),
+                        completed: false
+                    },
+                    {
+                        status: 'Out for Delivery',
+                        location: `${dest}, ${countryMap[destCountry]}`,
+                        time: '',
+                        completed: false
+                    },
+                    {
+                        status: 'Delivered',
+                        location: `${dest}, ${countryMap[destCountry]}`,
+                        time: '',
+                        completed: false
+                    }
+                ],
+                customerCare: {
+                    number: '+1 800 UPU HELP',
+                    email: 'support@upu.post',
+                    hours: 'Mon-Fri: 8AM - 6PM, Sat: 9AM - 2PM'
+                }
+            };
+            
+            shipments.push(shipment);
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+        }
+        
+        // Display Tracking Result
+        function displayTrackingResult(shipment) {
+            document.getElementById('trackingResult').classList.add('active');
+            document.getElementById('errorState').style.display = 'none';
+            
+            // Display tracking number
+            document.getElementById('displayTrackingNumber').textContent = shipment.trackingNumber;
+            
+            // Status cards
+            const statusCards = document.getElementById('statusCards');
+            const currentStatus = shipment.timeline.find(t => t.current) || shipment.timeline[shipment.timeline.length - 1];
+            const progress = shipment.timeline.filter(t => t.completed).length / shipment.timeline.length * 100;
+            
+            statusCards.innerHTML = `
+                <div class="status-card ${shipment.status}">
+                    <div class="status-icon">${getStatusIcon(shipment.status)}</div>
+                    <div class="status-label">Current Status</div>
+                    <div class="status-value">${currentStatus.status}</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon">📍</div>
+                    <div class="status-label">Location</div>
+                    <div class="status-value">${shipment.currentLocation}</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon">📅</div>
+                    <div class="status-label">Expected Delivery</div>
+                    <div class="status-value">${getExpectedDate(shipment)}</div>
+                </div>
+                <div class="status-card">
+                    <div class="status-icon">📦</div>
+                    <div class="status-label">Service Type</div>
+                    <div class="status-value">${serviceMap[shipment.service] || 'Express'}</div>
+                </div>
+            `;
+            
+            // Update route info
+            document.getElementById('routeOrigin').textContent = `${shipment.sender.city}, ${shipment.sender.country}`;
+            document.getElementById('routeStatus').textContent = currentStatus.status;
+            document.getElementById('routeDest').textContent = `${shipment.receiver.city}, ${shipment.receiver.country}`;
+            
+            // Build timeline
+            const timelineContainer = document.getElementById('shipmentTimeline');
+            timelineContainer.innerHTML = shipment.timeline.map((item, index) => `
+                <div class="timeline-item ${item.completed ? 'completed' : ''} ${item.current ? 'active' : ''}">
+                    <div class="timeline-content">
+                        <div class="timeline-status">
+                            ${item.completed ? '✅' : item.current ? '📍' : '⏳'} ${item.status}
+                        </div>
+                        <div class="timeline-location">
+                            📍 ${item.location}
+                        </div>
+                        <div class="timeline-time">
+                            ${item.time ? new Date(item.time).toLocaleString() : 'Pending'}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Sender info
+            document.getElementById('senderInfo').innerHTML = `
+                <div class="address-name">${shipment.sender.name}</div>
+                <div class="address-text">
+                    ${shipment.sender.street}<br>
+                    ${shipment.sender.city}, ${shipment.sender.state} ${shipment.sender.zip}<br>
+                    ${countryMap[shipment.sender.country] || shipment.sender.country}<br>
+                    📞 ${shipment.sender.phone || 'N/A'}
+                </div>
+            `;
+            
+            // Receiver info
+            document.getElementById('receiverInfo').innerHTML = `
+                <div class="address-name">${shipment.receiver.name}</div>
+                <div class="address-text">
+                    ${shipment.receiver.street}<br>
+                    ${shipment.receiver.city}, ${shipment.receiver.state} ${shipment.receiver.zip}<br>
+                    ${countryMap[shipment.receiver.country] || shipment.receiver.country}<br>
+                    📞 ${shipment.receiver.phone || 'N/A'}
+                </div>
+            `;
+            
+            // Package details
+            document.getElementById('packageDetails').innerHTML = `
+                <div class="detail-row">
+                    <span class="detail-label">Weight</span>
+                    <span class="detail-value">${shipment.package?.weight || 'N/A'} kg</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Dimensions</span>
+                    <span class="detail-value">${shipment.package?.dimensions || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Declared Value</span>
+                    <span class="detail-value">${shipment.package?.value || 'N/A'}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Service</span>
+                    <span class="detail-value">${serviceMap[shipment.service] || shipment.service}</span>
+                </div>
+            `;
+            
+            // Transit details
+            const distance = calculateDistance(
+                shipment.sender.coords[0], shipment.sender.coords[1],
+                shipment.receiver.coords[0], shipment.receiver.coords[1]
+            );
+            
+            document.getElementById('transitDetails').innerHTML = `
+                <div class="detail-row">
+                    <span class="detail-label">Total Distance</span>
+                    <span class="detail-value">${distance.toLocaleString()} km</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Origin Country</span>
+                    <span class="detail-value">${countryMap[shipment.sender.country]}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Destination Country</span>
+                    <span class="detail-value">${countryMap[shipment.receiver.country]}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Current Location</span>
+                    <span class="detail-value">${shipment.currentLocation}</span>
+                </div>
+            `;
+            
+            // Customer care
+            if (shipment.customerCare) {
+                document.getElementById('customerCareNumber').textContent = shipment.customerCare.number;
+                document.getElementById('customerCareHours').textContent = shipment.customerCare.hours;
+            }
+            
+            // Initialize map
+            setTimeout(() => initMap(shipment), 100);
+        }
+        
+        // Get status icon
+        function getStatusIcon(status) {
+            const icons = {
+                'active': '📦',
+                'transit': '🚚',
+                'arrived': '🛬',
+                'delivered': '✅',
+                'exception': '⚠️'
+            };
+            return icons[status] || '📦';
+        }
+        
+        // Get expected date
+        function getExpectedDate(shipment) {
+            const pendingItem = shipment.timeline.find(t => !t.completed && !t.current);
+            if (pendingItem && pendingItem.time) {
+                return new Date(pendingItem.time).toLocaleDateString();
+            }
+            return 'Calculating...';
+        }
+        
+        // Initialize Map
+        function initMap(shipment) {
+            if (currentMap) {
+                currentMap.remove();
+                currentMap = null;
+            }
+            
+            const origin = shipment.sender.coords;
+            const dest = shipment.receiver.coords;
+            
+            currentMap = L.map('trackingMap').setView(
+                [(origin[0] + dest[0])/2, (origin[1] + dest[1])/2], 
+                4
+            );
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(currentMap);
+            
+            // Clear previous markers
+            markers.forEach(m => currentMap.removeLayer(m));
+            markers = [];
+            if (routeLine) currentMap.removeLayer(routeLine);
+            
+            // Origin marker
+            const originMarker = L.marker(origin, {
+                icon: L.divIcon({
+                    className: 'custom-marker origin',
+                    html: '<div style="font-size:20px">📦</div>',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(currentMap).bindPopup(`
+                <b>Origin:</b> ${shipment.sender.city}<br>
+                ${shipment.sender.street}<br>
+                ${countryMap[shipment.sender.country]}
+            `);
+            markers.push(originMarker);
+            
+            // Destination marker
+            const destMarker = L.marker(dest, {
+                icon: L.divIcon({
+                    className: 'custom-marker destination',
+                    html: '<div style="font-size:20px">🏠</div>',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(currentMap).bindPopup(`
+                <b>Destination:</b> ${shipment.receiver.city}<br>
+                ${shipment.receiver.street}<br>
+                ${countryMap[shipment.receiver.country]}
+            `);
+            markers.push(destMarker);
+            
+            // Route line with curve
+            const latlngs = [
+                origin,
+                [(origin[0] + dest[0])/2, (origin[1] + dest[1])/2 + 20],
+                dest
+            ];
+            
+            routeLine = L.polyline(latlngs, {
+                color: '#1e3c72',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '10, 10',
+                smoothFactor: 1
+            }).addTo(currentMap);
+            
+            // Animated current position
+            if (shipment.status === 'transit' || shipment.status === 'active') {
+                const currentPos = [
+                    origin[0] + (dest[0] - origin[0]) * 0.6,
+                    origin[1] + (dest[1] - origin[1]) * 0.6 + 12
+                ];
+                
+                const currentMarker = L.marker(currentPos, {
+                    icon: L.divIcon({
+                        className: 'custom-marker current',
+                        html: '<div style="font-size:20px">🚚</div>',
+                        iconSize: [44, 44],
+                        iconAnchor: [22, 22]
+                    })
+                }).addTo(currentMap).bindPopup('<b>Current Location</b><br>' + shipment.currentLocation);
+                markers.push(currentMarker);
+                
+                // Animate
+                let progress = 0.6;
+                if (animationInterval) clearInterval(animationInterval);
+                animationInterval = setInterval(() => {
+                    progress += 0.005;
+                    if (progress > 0.9) progress = 0.3;
+                    const newPos = [
+                        origin[0] + (dest[0] - origin[0]) * progress,
+                        origin[1] + (dest[1] - origin[1]) * progress + (20 * Math.sin(progress * Math.PI))
+                    ];
+                    currentMarker.setLatLng(newPos);
+                }, 2000);
+            }
+            
+            // Fit bounds
+            currentMap.fitBounds([origin, dest], {padding: [50, 50]});
+        }
+        
+        // Show Toast
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+        
+        // Admin Login (placeholder)
+        function showAdminLogin() {
+            const password = prompt('Enter admin password:');
+            if (password === 'UPUadmin2024') {
+                window.location.href = '#admin'; // Would redirect to admin panel
+                showToast('✅ Admin access granted');
+            } else {
+                showToast('❌ Invalid password');
+            }
+        }
+        
+        // Help (placeholder)
+        function showHelp() {
+            alert('UPU Tracking Help:\n\n• Enter your 13-digit S10 tracking number\n• Format: XX123456789YY\n• Example: EE123456789FR\n\nFor assistance, contact customer care.');
+        }
+        
+        // Handle Enter key
+        document.getElementById('trackingInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') trackPackage();
+        });
+        
+        // Initialize with demo data if empty
+        if (shipments.length === 0) {
+            createDemoShipment('EE123456789FR');
+        }
+    </script>
+</body>
+</html>

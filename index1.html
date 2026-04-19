@@ -1,0 +1,2331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UPU Admin Dashboard - Live Tracking & Delivery Management</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        :root{--primary:#1e3c72;--accent:#d4af37;--danger:#dc3545;--success:#28a745;--light:#f8f9fa;--info:#17a2b8;--warning:#ffc107;--purple:#6f42c1}
+        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:linear-gradient(135deg,var(--primary) 0%,#2a5298 100%);min-height:100vh;color:#333}
+        
+        .login-container{position:fixed;top:0;left:0;width:100%;height:100%;background:linear-gradient(135deg,var(--primary) 0%,#2a5298 100%);display:flex;align-items:center;justify-content:center;z-index:10000;padding:20px}
+        .login-box{background:#fff;border-radius:20px;padding:40px 30px;width:100%;max-width:400px;box-shadow:0 10px 25px rgba(0,0,0,0.3);text-align:center}
+        .login-logo{width:80px;height:80px;background:linear-gradient(135deg,var(--accent) 0%,#f4d03f 100%);border-radius:50%;margin:0 auto 20px;display:flex;align-items:center;justify-content:center;font-size:40px}
+        .login-box h1{color:var(--primary);font-size:24px;margin-bottom:8px}
+        .login-box p{color:#6c757d;font-size:14px;margin-bottom:30px}
+        .input-field{width:100%;padding:14px 16px;border:2px solid #e9ecef;border-radius:12px;font-size:16px;margin-bottom:20px}
+        .input-field:focus{outline:none;border-color:var(--primary)}
+        .btn{width:100%;padding:14px;border:none;border-radius:12px;font-size:16px;font-weight:600;cursor:pointer;background:linear-gradient(135deg,var(--accent) 0%,#f4d03f 100%);color:var(--primary)}
+        .btn:hover{transform:translateY(-2px);box-shadow:0 10px 25px rgba(0,0,0,0.2)}
+        .btn-secondary{background:linear-gradient(135deg,#6c757d 0%,#495057 100%);color:#fff}
+        .btn-success{background:linear-gradient(135deg,var(--success) 0%,#1e7e34 100%);color:#fff}
+        .btn-info{background:linear-gradient(135deg,var(--info) 0%,#117a8b 100%);color:#fff}
+        .error-message{color:var(--danger);font-size:14px;margin-top:15px;display:none}
+        
+        .dashboard{display:none;min-height:100vh}
+        .dashboard.active{display:block}
+        .mobile-header{background:#fff;padding:15px 20px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 4px 6px rgba(0,0,0,0.1);position:sticky;top:0;z-index:100}
+        .menu-toggle{width:40px;height:40px;border:none;background:#f0f0f0;border-radius:10px;font-size:20px;cursor:pointer}
+        .mobile-title{font-size:18px;font-weight:700;color:var(--primary)}
+        .sidebar{position:fixed;top:0;left:-100%;width:80%;max-width:300px;height:100vh;background:var(--primary);z-index:1000;transition:left 0.3s;overflow-y:auto}
+        .sidebar.open{left:0}
+        .sidebar-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999;display:none}
+        .sidebar-overlay.show{display:block}
+        .sidebar-header{padding:30px 20px;background:rgba(0,0,0,0.2);text-align:center}
+        .sidebar-avatar{width:70px;height:70px;background:linear-gradient(135deg,var(--accent) 0%,#f4d03f 100%);border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:30px}
+        .sidebar-name{color:#fff;font-size:18px;font-weight:600}
+        .sidebar-role{color:rgba(255,255,255,0.7);font-size:13px;margin-top:5px}
+        .nav-menu{list-style:none;padding:20px 0}
+        .nav-item{margin:5px 15px}
+        .nav-link{display:flex;align-items:center;gap:12px;padding:15px 20px;color:rgba(255,255,255,0.8);text-decoration:none;border-radius:12px;cursor:pointer}
+        .nav-link:hover,.nav-link.active{background:rgba(255,255,255,0.15);color:#fff}
+        .main-content{padding:20px;max-width:1400px;margin:0 auto}
+        @media(min-width:1024px){.mobile-header{display:none}.sidebar{left:0;width:280px}.sidebar-overlay{display:none!important}.main-content{margin-left:280px;padding:30px}}
+        
+        .stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px;margin-bottom:25px}
+        @media(min-width:768px){.stats-grid{grid-template-columns:repeat(4,1fr)}}
+        .stat-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 6px rgba(0,0,0,0.1);display:flex;align-items:center;gap:12px}
+        .stat-icon{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:24px}
+        .stat-icon.blue{background:#e3f2fd}.stat-icon.green{background:#e8f5e9}.stat-icon.orange{background:#fff3e0}.stat-icon.purple{background:#f3e5f5}.stat-icon.red{background:#ffebee}
+        .stat-info h3{font-size:12px;color:#6c757d;margin-bottom:4px}.stat-info p{font-size:24px;font-weight:700;color:var(--primary)}
+        .action-bar{display:flex;gap:10px;margin-bottom:25px;flex-wrap:wrap}
+        .btn-action{flex:1;min-width:140px;padding:14px 20px;background:#fff;border:2px solid var(--primary);color:var(--primary);border-radius:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-size:14px}
+        .btn-action:hover{background:var(--primary);color:#fff}
+        .btn-action.primary{background:linear-gradient(135deg,var(--accent) 0%,#f4d03f 100%);border:none;color:var(--primary)}
+        .btn-action.success{background:linear-gradient(135deg,var(--success) 0%,#1e7e34 100%);border:none;color:#fff}
+        
+        .card{background:#fff;border-radius:20px;padding:25px;margin-bottom:25px;box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+        .card-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:25px;flex-wrap:wrap;gap:15px}
+        .card-title{font-size:20px;font-weight:700;color:var(--primary);display:flex;align-items:center;gap:10px}
+        
+        .form-section{margin-bottom:30px}
+        .section-label{font-size:14px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:20px;padding-bottom:10px;border-bottom:2px solid var(--accent);display:flex;align-items:center;gap:8px}
+        .form-grid{display:grid;grid-template-columns:1fr;gap:20px}
+        @media(min-width:768px){.form-grid{grid-template-columns:repeat(2,1fr)}.form-grid .full-width{grid-column:1/-1}}
+        @media(min-width:1024px){.form-grid{grid-template-columns:repeat(3,1fr)}}
+        .form-group{display:flex;flex-direction:column}
+        .form-group label{font-size:14px;font-weight:600;margin-bottom:8px}
+        .form-group label .required{color:var(--danger);margin-left:4px}
+        .form-control{padding:14px 16px;border:2px solid #e9ecef;border-radius:12px;font-size:16px;width:100%}
+        .form-control:focus{outline:none;border-color:var(--primary)}
+        select.form-control{cursor:pointer;appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23333' d='M6 9L1 4h10z'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 16px center;padding-right:40px}
+        textarea.form-control{min-height:100px;resize:vertical}
+        .form-hint{font-size:12px;color:#6c757d;margin-top:5px;font-style:italic}
+        
+        .delivery-date-section{background:linear-gradient(135deg,#e8f5e9 0%,#fff3e0 100%);border-radius:16px;padding:25px;margin:20px 0;border-left:5px solid var(--success)}
+        .delivery-date-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:15px;display:flex;align-items:center;gap:8px}
+        .date-display{background:#fff;padding:20px;border-radius:12px;text-align:center;margin:10px 0;border:2px solid var(--success)}
+        .date-display .label{font-size:13px;color:#6c757d;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px}
+        .date-display .value{font-size:28px;font-weight:700;color:var(--success)}
+        .date-display .sub{font-size:14px;color:#6c757d;margin-top:5px}
+        .countdown-box{background:linear-gradient(135deg,var(--primary) 0%,#2a5298 100%);color:#fff;padding:20px;border-radius:16px;text-align:center;margin:15px 0}
+        .countdown-box .label{font-size:13px;opacity:0.9;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px}
+        .countdown-box .timer{font-size:36px;font-weight:700;font-family:'Courier New',monospace}
+        .countdown-box .status{font-size:16px;margin-top:10px;color:var(--accent)}
+        
+        .agent-section{background:linear-gradient(135deg,#f3e5f5 0%,#e3f2fd 100%);border-radius:16px;padding:25px;margin:20px 0;border-left:5px solid var(--purple)}
+        .agent-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:15px;display:flex;align-items:center;gap:8px}
+        .agent-card{background:#fff;padding:20px;border-radius:16px;border:2px solid var(--purple);text-align:center}
+        .agent-avatar{width:80px;height:80px;background:linear-gradient(135deg,var(--purple) 0%,#9c27b0 100%);border-radius:50%;margin:0 auto 15px;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff}
+        .agent-name{font-size:20px;font-weight:700;color:var(--primary);margin-bottom:5px}
+        .agent-role{font-size:14px;color:#6c757d;margin-bottom:15px}
+        .agent-contact{background:linear-gradient(135deg,var(--purple) 0%,#9c27b0 100%);color:#fff;padding:15px;border-radius:12px;margin:15px 0}
+        .agent-contact .label{font-size:12px;opacity:0.9;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+        .agent-contact .number{font-size:28px;font-weight:700;font-family:'Courier New',monospace}
+        .agent-contact .email{font-size:14px;margin-top:5px;opacity:0.9}
+        
+        .notification-section{background:linear-gradient(135deg,#fff3e0 0%,#fce4ec 100%);border-radius:16px;padding:25px;margin:20px 0;border-left:5px solid var(--warning)}
+        .notification-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:15px;display:flex;align-items:center;gap:8px}
+        .email-preview{background:#fff;padding:20px;border-radius:12px;border:2px dashed var(--warning);font-family:'Courier New',monospace;font-size:13px;line-height:1.6;color:#333}
+        .email-preview .subject{font-weight:700;color:var(--primary);margin-bottom:10px;padding-bottom:10px;border-bottom:1px solid #e9ecef}
+        .email-status{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-top:15px}
+        .email-status.sent{background:#d4edda;color:#155724}
+        .email-status.pending{background:#fff3cd;color:#856404}
+        .email-status.failed{background:#f8d7da;color:#721c24}
+        
+        .tracking-result{background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);border-radius:16px;padding:25px;margin-top:25px;border-left:5px solid var(--accent)}
+        .tracking-number-display{font-family:'Courier New',monospace;font-size:28px;font-weight:700;color:var(--primary);text-align:center;margin-bottom:20px;letter-spacing:2px}
+        @media(max-width:480px){.tracking-number-display{font-size:22px}}
+        .tracking-meta{display:flex;flex-wrap:wrap;gap:15px;justify-content:center;margin-bottom:20px}
+        .meta-tag{background:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;display:flex;align-items:center;gap:6px}
+        .action-buttons{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+        .btn-icon{padding:12px 20px;border:none;border-radius:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:14px}
+        .btn-icon.copy{background:#e3f2fd;color:#1976d2}.btn-icon.share{background:#e8f5e9;color:#388e3c}.btn-icon.qr{background:#f3e5f5;color:#7b1fa2}.btn-icon.receipt{background:#fff3e0;color:#f57c00}.btn-icon.track{background:#e3f2fd;color:#1976d2}.btn-icon.deliver{background:#d4edda;color:#155724}
+        
+        .shipment-details{background:#fff;border-radius:16px;padding:20px;margin-top:20px}
+        .detail-section{margin-bottom:25px}.detail-section:last-child{margin-bottom:0}
+        .detail-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:15px;display:flex;align-items:center;gap:8px}
+        .detail-grid{display:grid;grid-template-columns:1fr;gap:15px}
+        @media(min-width:768px){.detail-grid{grid-template-columns:repeat(2,1fr)}}
+        .detail-item{background:#f8f9fa;padding:15px;border-radius:12px}
+        .detail-item.full-width{grid-column:1/-1}
+        .detail-label{font-size:12px;color:#6c757d;text-transform:uppercase;margin-bottom:5px}
+        .detail-value{font-size:15px;font-weight:600;word-break:break-word}
+        
+        .tracking-list{display:flex;flex-direction:column;gap:15px}
+        .tracking-item{background:#fff;border-radius:16px;padding:20px;border-left:4px solid var(--accent);box-shadow:0 4px 6px rgba(0,0,0,0.1)}
+        .tracking-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:15px;flex-wrap:wrap;gap:10px}
+        .tracking-id{font-family:'Courier New',monospace;font-size:18px;font-weight:700;color:var(--primary)}
+        .tracking-status{padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600}
+        .status-active{background:#d4edda;color:#155724}.status-transit{background:#fff3cd;color:#856404}.status-delivered{background:#d1ecf1;color:#0c5460}.status-arrived{background:#d4edda;color:#155724;border:2px solid var(--success)}
+        .tracking-route{display:flex;align-items:center;gap:10px;margin-bottom:15px;font-size:14px;color:#6c757d;flex-wrap:wrap}
+        .route-arrow{color:var(--accent)}
+        .tracking-info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;font-size:13px}
+        @media(min-width:768px){.tracking-info-grid{grid-template-columns:repeat(4,1fr)}}
+        .info-item{display:flex;flex-direction:column}.info-label{color:#6c757d;font-size:11px;text-transform:uppercase}.info-value{font-weight:600}
+        .tracking-actions{display:flex;gap:8px;margin-top:15px;padding-top:15px;border-top:1px solid #e9ecef;flex-wrap:wrap}
+        .btn-small{padding:8px 14px;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px}
+        .btn-small.view{background:#f3e5f5;color:#7b1fa2}.btn-small.edit{background:#e3f2fd;color:#1976d2}.btn-small.delete{background:#ffebee;color:#c62828}.btn-small.receipt{background:#fff3e0;color:#f57c00}.btn-small.track{background:#e8f5e9;color:#388e3c}.btn-small.deliver{background:#d4edda;color:#155724}
+        
+        .search-bar{display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap}
+        .search-input{flex:1;min-width:200px}.filter-select{width:100%}
+        @media(min-width:768px){.filter-select{width:150px}}
+        
+        .modal-overlay{position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:none;align-items:center;justify-content:center;padding:20px;overflow-y:auto}
+        .modal-overlay.show{display:flex}
+        .modal{background:#fff;border-radius:20px;width:100%;max-width:900px;max-height:95vh;overflow-y:auto;animation:modalSlide 0.3s}
+        .modal.large{max-width:1200px}
+        @keyframes modalSlide{from{opacity:0;transform:translateY(-50px)}to{opacity:1;transform:translateY(0)}}
+        .modal-header{padding:25px;border-bottom:1px solid #e9ecef;display:flex;justify-content:space-between;align-items:center}
+        .modal-title{font-size:20px;font-weight:700;color:var(--primary)}
+        .modal-close{width:36px;height:36px;border:none;background:#f0f0f0;border-radius:50%;font-size:20px;cursor:pointer}
+        .modal-close:hover{background:var(--danger);color:#fff}
+        .modal-body{padding:25px}.modal-footer{padding:20px 25px;border-top:1px solid #e9ecef;display:flex;gap:10px;justify-content:flex-end}
+        .btn-modal{padding:12px 24px;border:none;border-radius:12px;font-weight:600;cursor:pointer}
+        .btn-modal.secondary{background:#e9ecef;color:#333}
+        .btn-modal.primary{background:linear-gradient(135deg,var(--accent) 0%,#f4d03f 100%);color:var(--primary)}
+        .btn-modal.success{background:linear-gradient(135deg,var(--success) 0%,#1e7e34 100%);color:#fff}
+        
+        .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%) translateY(100px);background:#333;color:#fff;padding:16px 24px;border-radius:12px;box-shadow:0 10px 25px rgba(0,0,0,0.3);display:flex;align-items:center;gap:10px;z-index:3000;opacity:0;transition:all 0.3s}
+        .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        
+        .empty-state{text-align:center;padding:60px 20px;color:#6c757d}
+        .empty-icon{font-size:64px;margin-bottom:20px;opacity:0.5}
+        .empty-text{font-size:18px;font-weight:600;margin-bottom:10px}
+        
+        .content-section{display:none}.content-section.active{display:block;animation:fadeIn 0.5s}
+        @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+        
+        .timeline{position:relative;padding-left:30px}.timeline::before{content:'';position:absolute;left:8px;top:0;bottom:0;width:2px;background:var(--accent)}
+        .timeline-item{position:relative;padding-bottom:20px}.timeline-item::before{content:'';position:absolute;left:-26px;top:4px;width:12px;height:12px;background:var(--accent);border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--accent)}
+        .timeline-item.active::before{background:var(--primary);box-shadow:0 0 0 3px rgba(30,60,114,0.3)}
+        .timeline-date{font-size:12px;color:#6c757d;margin-bottom:4px}.timeline-content{font-weight:600}.timeline-location{font-size:13px;color:#6c757d}
+        
+        .receipt-container{background:#fff;padding:30px;border-radius:12px;max-width:500px;margin:0 auto;font-family:'Courier New',monospace;border:2px solid #333;position:relative}
+        .receipt-watermark{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(-45deg);font-size:72px;color:rgba(30,60,114,0.05);pointer-events:none;z-index:0;font-weight:900}
+        .receipt-header{text-align:center;border-bottom:2px dashed #333;padding-bottom:20px;margin-bottom:20px;position:relative;z-index:1}
+        .receipt-logo{font-size:48px;margin-bottom:10px}
+        .receipt-title{font-size:24px;font-weight:700;color:var(--primary);margin-bottom:5px;letter-spacing:2px}
+        .receipt-subtitle{font-size:14px;color:#666;text-transform:uppercase}
+        .receipt-info{margin-bottom:20px;position:relative;z-index:1}
+        .receipt-row{display:flex;justify-content:space-between;margin-bottom:8px;font-size:14px}
+        .receipt-label{font-weight:600}.receipt-value{text-align:right}
+        .receipt-divider{border-top:1px dashed #ccc;margin:15px 0}
+        .receipt-total{border-top:2px solid #333;padding-top:15px;margin-top:15px;font-size:18px;font-weight:700;display:flex;justify-content:space-between}
+        .receipt-barcode{background:#f0f0f0;padding:15px;text-align:center;margin:20px 0;border-radius:8px;border:2px solid #333}
+        .receipt-barcode-text{font-family:'Courier New',monospace;font-size:20px;letter-spacing:3px;font-weight:700}
+        .receipt-footer{text-align:center;font-size:12px;color:#666;margin-top:20px;padding-top:15px;border-top:1px dashed #ccc;position:relative;z-index:1}
+        .receipt-contact{background:linear-gradient(135deg,var(--primary) 0%,#2a5298 100%);color:#fff;padding:20px;border-radius:12px;margin:20px 0;text-align:center;border:3px solid var(--accent);position:relative;z-index:1}
+        .receipt-contact-title{font-weight:700;margin-bottom:10px;font-size:16px;color:var(--accent)}
+        .receipt-contact-number{font-size:28px;font-weight:700;letter-spacing:2px;margin:10px 0;text-shadow:2px 2px 4px rgba(0,0,0,0.3)}
+        .receipt-upu-info{background:#f8f9fa;padding:15px;border-radius:8px;margin:15px 0;font-size:11px;line-height:1.6;border:1px solid #dee2e6}
+        .verification-code{background:#fff3e0;border:2px dashed #f57c00;padding:10px;text-align:center;margin:10px 0;border-radius:8px;font-weight:700;color:#e65100}
+        .customer-care-section{background:linear-gradient(135deg,#e3f2fd 0%,#f3e5f5 100%);border-radius:16px;padding:20px;margin-top:20px;border-left:5px solid var(--primary)}
+        .customer-care-title{font-size:16px;font-weight:700;color:var(--primary);margin-bottom:15px;display:flex;align-items:center;gap:8px}
+        .customer-care-grid{display:grid;grid-template-columns:1fr;gap:15px}
+        @media(min-width:768px){.customer-care-grid{grid-template-columns:repeat(2,1fr)}}
+        
+        .tracking-dashboard{display:grid;grid-template-columns:1fr;gap:25px;margin-top:25px}
+        @media(min-width:1024px){.tracking-dashboard{grid-template-columns:380px 1fr}}
+        
+        .timeline-panel{background:#fff;border-radius:20px;padding:25px;box-shadow:0 4px 15px rgba(0,0,0,0.1);height:fit-content}
+        .timeline-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #e9ecef}
+        .timeline-header h3{color:var(--primary);font-size:18px;display:flex;align-items:center;gap:8px}
+        .delivery-status-badge{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:700}
+        .status-delivered-badge{background:#d4edda;color:#155724}
+        .status-transit-badge{background:#fff3cd;color:#856404}
+        .status-active-badge{background:#cce5ff;color:#004085}
+        .status-arrived-badge{background:#d4edda;color:#155724;border:2px solid var(--success)}
+        
+        .vertical-timeline{position:relative;padding-left:35px}
+        .vertical-timeline::before{content:'';position:absolute;left:12px;top:0;bottom:0;width:3px;background:linear-gradient(to bottom,var(--success) 0%,#e9ecef 100%);border-radius:3px}
+        .v-timeline-item{position:relative;padding-bottom:25px;opacity:0.7;transition:all 0.3s}
+        .v-timeline-item.active{opacity:1}
+        .v-timeline-item.completed::before{background:var(--success);border-color:var(--success)}
+        .v-timeline-item::before{content:'';position:absolute;left:-29px;top:2px;width:14px;height:14px;background:#fff;border:3px solid #dee2e6;border-radius:50%;z-index:2;transition:all 0.3s}
+        .v-timeline-item.active::before{background:var(--success);border-color:var(--success);box-shadow:0 0 0 4px rgba(40,167,69,0.2)}
+        .v-timeline-item.current::before{background:var(--primary);border-color:var(--primary);animation:pulse 2s infinite}
+        @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(30,60,114,0.4)}70%{box-shadow:0 0 0 10px rgba(30,60,114,0)}100%{box-shadow:0 0 0 0 rgba(30,60,114,0)}}
+        
+        .v-timeline-content{background:#f8f9fa;padding:15px;border-radius:12px;border-left:4px solid transparent}
+        .v-timeline-item.active .v-timeline-content{border-left-color:var(--success);background:#f0f9f4}
+        .v-timeline-item.current .v-timeline-content{border-left-color:var(--primary);background:#e8f0fe}
+        .v-timeline-status{font-size:14px;font-weight:700;color:var(--primary);margin-bottom:5px;display:flex;align-items:center;gap:6px}
+        .v-timeline-location{font-size:13px;color:#6c757d;margin-bottom:3px}
+        .v-timeline-time{font-size:12px;color:#adb5bd}
+        .v-timeline-icon{font-size:18px}
+        
+        .map-panel{background:#fff;border-radius:20px;padding:25px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}
+        .map-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding-bottom:15px;border-bottom:2px solid #e9ecef;flex-wrap:wrap;gap:10px}
+        .map-header h3{color:var(--primary);font-size:18px;display:flex;align-items:center;gap:8px}
+        .map-stats{display:flex;gap:15px;flex-wrap:wrap}
+        .map-stat{background:linear-gradient(135deg,#f8f9fa 0%,#e9ecef 100%);padding:10px 16px;border-radius:12px;font-size:13px}
+        .map-stat strong{color:var(--primary);font-size:15px;display:block}
+        
+        #trackingMap{height:500px;border-radius:16px;border:2px solid #e9ecef;z-index:1}
+        @media(max-width:768px){#trackingMap{height:350px}}
+        
+        .custom-marker{background:#fff;border-radius:50%;padding:8px;box-shadow:0 4px 12px rgba(0,0,0,0.3);border:3px solid var(--primary);display:flex;align-items:center;justify-content:center;font-size:20px;width:44px;height:44px}
+        .custom-marker.origin{border-color:var(--success)}
+        .custom-marker.destination{border-color:var(--danger)}
+        .custom-marker.current{border-color:var(--primary);animation:bounce 1s infinite}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+        
+        .route-info{display:grid;grid-template-columns:repeat(3,1fr);gap:15px;margin-top:20px}
+        @media(max-width:768px){.route-info{grid-template-columns:1fr}}
+        .route-card{background:linear-gradient(135deg,#f8f9fa 0%,#fff 100%);padding:20px;border-radius:16px;text-align:center;border:2px solid #e9ecef;transition:all 0.3s}
+        .route-card:hover{transform:translateY(-5px);box-shadow:0 10px 25px rgba(0,0,0,0.1)}
+        .route-card-icon{font-size:36px;margin-bottom:10px}
+        .route-card-label{font-size:12px;color:#6c757d;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+        .route-card-value{font-size:18px;font-weight:700;color:var(--primary)}
+        .route-card-sub{font-size:13px;color:#adb5bd;margin-top:5px}
+        
+        .live-indicator{display:inline-flex;align-items:center;gap:8px;background:#dc3545;color:#fff;padding:8px 16px;border-radius:20px;font-size:13px;font-weight:600;margin-left:10px}
+        .live-dot{width:8px;height:8px;background:#fff;border-radius:50%;animation:livePulse 1.5s infinite}
+        @keyframes livePulse{0%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.2)}100%{opacity:1;transform:scale(1)}}
+        
+        .progress-track{background:#e9ecef;height:8px;border-radius:4px;margin:20px 0;overflow:hidden}
+        .progress-fill{height:100%;background:linear-gradient(90deg,var(--success) 0%,var(--primary) 100%);border-radius:4px;transition:width 1s ease;position:relative}
+        .progress-fill::after{content:'';position:absolute;right:0;top:0;bottom:0;width:20px;background:linear-gradient(90deg,transparent,rgba(255,255,255,0.5));animation:shimmer 2s infinite}
+        @keyframes shimmer{0%{transform:translateX(0)}100%{transform:translateX(20px)}}
+        
+        .delivery-panel{background:#fff;border-radius:20px;padding:25px;margin-bottom:25px;box-shadow:0 4px 15px rgba(0,0,0,0.1)}
+        .delivery-panel-header{background:linear-gradient(135deg,var(--primary) 0%,#2a5298 100%);color:#fff;padding:20px;border-radius:16px;margin-bottom:25px;text-align:center}
+        .delivery-panel-header h3{font-size:24px;margin-bottom:10px}
+        .delivery-panel-header p{opacity:0.9;font-size:14px}
+        
+        .status-update-form{background:#f8f9fa;padding:25px;border-radius:16px;margin:20px 0}
+        .status-update-form .form-grid{margin-top:15px}
+        
+        .arrival-banner{background:linear-gradient(135deg,var(--success) 0%,#1e7e34 100%);color:#fff;padding:25px;border-radius:16px;text-align:center;margin:20px 0;animation:slideDown 0.5s}
+        @keyframes slideDown{from{opacity:0;transform:translateY(-20px)}to{opacity:1;transform:translateY(0)}}
+        .arrival-banner h4{font-size:24px;margin-bottom:10px}
+        .arrival-banner p{font-size:16px;opacity:0.9}
+        
+        .delivery-form-section{background:#fff;padding:25px;border-radius:16px;border:2px solid #e9ecef;margin:20px 0}
+        .delivery-form-section h4{color:var(--primary);margin-bottom:20px;display:flex;align-items:center;gap:10px}
+        
+        @media print{
+            body *{visibility:hidden}
+            .receipt-print,.receipt-print *{visibility:visible}
+            .receipt-print{position:absolute;left:0;top:0;width:100%;padding:20px}
+            .no-print{display:none!important}
+            .receipt-container{box-shadow:none;border:2px solid #000}
+        }
+        
+        /* Map Preview in Create Form */
+        .map-preview-section {
+            margin: 20px 0;
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 16px;
+            padding: 20px;
+            border-left: 5px solid var(--info);
+        }
+        .map-preview-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        #previewMap {
+            height: 300px;
+            border-radius: 12px;
+            border: 2px solid #e9ecef;
+            margin-bottom: 15px;
+        }
+        .route-summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-top: 15px;
+        }
+        @media(max-width:768px){.route-summary{grid-template-columns:1fr}}
+        .route-summary-item {
+            background: #fff;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+        .route-summary-item .label {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .route-summary-item .value {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    <!-- Login Screen -->
+    <div class="login-container" id="loginScreen">
+        <div class="login-box">
+            <div class="login-logo">👑</div>
+            <h1>UPU Admin Portal</h1>
+            <p>Universal Postal Union Tracking System</p>
+            <input type="password" class="input-field" id="adminPassword" placeholder="Enter password">
+            <button class="btn" onclick="login()">🔐 Access Dashboard</button>
+            <div class="error-message" id="loginError">Invalid password. Try: UPUadmin2024</div>
+            <p style="margin-top:20px;font-size:12px;color:#6c757d">Default: <code>UPUadmin2024</code></p>
+        </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div class="dashboard" id="dashboard">
+        <header class="mobile-header">
+            <button class="menu-toggle" onclick="toggleSidebar()">☰</button>
+            <div class="mobile-title">🌍 UPU Dashboard</div>
+            <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--accent) 0%,#f4d03f 100%);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px">👤</div>
+        </header>
+
+        <div class="sidebar-overlay" id="sidebarOverlay" onclick="toggleSidebar()"></div>
+
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-avatar">👑</div>
+                <div class="sidebar-name">System Owner</div>
+                <div class="sidebar-role">UPU Administrator</div>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item"><a class="nav-link active" onclick="showSection('create',this)"><span>⚡</span> Create Shipment</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('batch',this)"><span>📦</span> Batch Create</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('shipments',this)"><span>🚚</span> All Shipments</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('tracking',this)"><span>🔍</span> Quick Track</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('liveTrack',this)"><span>🗺️</span> Live Map Track</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('deliveryManage',this)"><span>📍</span> Delivery Manage</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="showSection('analytics',this)"><span>📊</span> Analytics</a></li>
+                <li class="nav-item"><a class="nav-link" onclick="logout()"><span>🚪</span> Logout</a></li>
+            </ul>
+        </aside>
+
+        <main class="main-content">
+            <!-- Stats -->
+            <div class="stats-grid">
+                <div class="stat-card"><div class="stat-icon blue">📮</div><div class="stat-info"><h3>Total Shipments</h3><p id="statTotal">0</p></div></div>
+                <div class="stat-card"><div class="stat-icon green">✅</div><div class="stat-info"><h3>Active Today</h3><p id="statToday">0</p></div></div>
+                <div class="stat-card"><div class="stat-icon orange">🌐</div><div class="stat-info"><h3>Countries</h3><p>192</p></div></div>
+                <div class="stat-card"><div class="stat-icon purple">⚡</div><div class="stat-info"><h3>In Transit</h3><p id="statTransit">0</p></div></div>
+            </div>
+
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <button class="btn-action primary" onclick="showSection('create')"><span>+</span> New Shipment</button>
+                <button class="btn-action" onclick="exportData()"><span>📥</span> Export</button>
+                <button class="btn-action" onclick="showSection('tracking')"><span>🔍</span> Quick Track</button>
+                <button class="btn-action success" onclick="showSection('deliveryManage')"><span>📍</span> Update Delivery</button>
+            </div>
+
+            <!-- Create Shipment Section -->
+            <section class="content-section active" id="create">
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">⚡ Create New Shipment</h2></div>
+                    <form id="shipmentForm" onsubmit="event.preventDefault();createShipment()">
+                        <!-- Sender Details -->
+                        <div class="form-section">
+                            <div class="section-label">📤 Sender Details</div>
+                            <div class="form-grid">
+                                <div class="form-group full-width"><label>Full Name <span class="required">*</span></label><input type="text" class="form-control" id="senderName" required placeholder="John Doe"></div>
+                                <div class="form-group full-width"><label>Street Address <span class="required">*</span></label><input type="text" class="form-control" id="senderStreet" required placeholder="123 Main Street"></div>
+                                <div class="form-group"><label>City <span class="required">*</span></label><input type="text" class="form-control" id="senderCity" required placeholder="Paris" onchange="updateRoutePreview()"></div>
+                                <div class="form-group"><label>State/Province <span class="required">*</span></label><input type="text" class="form-control" id="senderState" required placeholder="Île-de-France"></div>
+                                <div class="form-group"><label>ZIP/Postal Code</label><input type="text" class="form-control" id="senderZip" placeholder="75001"></div>
+                                <div class="form-group"><label>Country <span class="required">*</span></label><select class="form-control" id="senderCountry" required onchange="updateRoutePreview()">
+                                    <option value="">Select Country</option>
+                                    <option value="US">United States</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="CN">China</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR" selected>France</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="IN">India</option>
+                                    <option value="BR">Brazil</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="MX">Mexico</option>
+                                    <option value="IT">Italy</option>
+                                    <option value="ES">Spain</option>
+                                    <option value="NL">Netherlands</option>
+                                </select></div>
+                                <div class="form-group"><label>Phone Number</label><input type="tel" class="form-control" id="senderPhone" placeholder="+33 1 23 45 67 89"></div>
+                                <div class="form-group"><label>Email <span class="required">*</span></label><input type="email" class="form-control" id="senderEmail" required placeholder="sender@example.com"></div>
+                            </div>
+                        </div>
+
+                        <!-- Receiver Details -->
+                        <div class="form-section">
+                            <div class="section-label">📥 Receiver Details</div>
+                            <div class="form-grid">
+                                <div class="form-group full-width"><label>Full Name <span class="required">*</span></label><input type="text" class="form-control" id="receiverName" required placeholder="Jane Smith"></div>
+                                <div class="form-group full-width"><label>Street Address <span class="required">*</span></label><input type="text" class="form-control" id="receiverStreet" required placeholder="456 Oak Avenue"></div>
+                                <div class="form-group"><label>City <span class="required">*</span></label><input type="text" class="form-control" id="receiverCity" required placeholder="New York" onchange="updateRoutePreview()"></div>
+                                <div class="form-group"><label>State/Province <span class="required">*</span></label><input type="text" class="form-control" id="receiverState" required placeholder="New York"></div>
+                                <div class="form-group"><label>ZIP/Postal Code</label><input type="text" class="form-control" id="receiverZip" placeholder="10001"></div>
+                                <div class="form-group"><label>Country <span class="required">*</span></label><select class="form-control" id="receiverCountry" required onchange="updateRoutePreview()">
+                                    <option value="">Select Country</option>
+                                    <option value="US" selected>United States</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="CN">China</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="JP">Japan</option>
+                                    <option value="IN">India</option>
+                                    <option value="BR">Brazil</option>
+                                    <option value="CA">Canada</option>
+                                    <option value="AU">Australia</option>
+                                    <option value="MX">Mexico</option>
+                                    <option value="IT">Italy</option>
+                                    <option value="ES">Spain</option>
+                                    <option value="NL">Netherlands</option>
+                                </select></div>
+                                <div class="form-group"><label>Phone Number <span class="required">*</span></label><input type="tel" class="form-control" id="receiverPhone" required placeholder="+1 555 123 4567"></div>
+                                <div class="form-group"><label>Email <span class="required">*</span></label><input type="email" class="form-control" id="receiverEmail" required placeholder="receiver@example.com"></div>
+                            </div>
+                        </div>
+
+                        <!-- LIVE ROUTE PREVIEW MAP -->
+                        <div class="map-preview-section" id="routePreviewSection">
+                            <div class="map-preview-title">🗺️ Route Preview (Live)</div>
+                            <div id="previewMap"></div>
+                            <div class="route-summary">
+                                <div class="route-summary-item">
+                                    <div class="label">From</div>
+                                    <div class="value" id="previewOrigin">Paris, FR</div>
+                                </div>
+                                <div class="route-summary-item">
+                                    <div class="label">To</div>
+                                    <div class="value" id="previewDest">New York, US</div>
+                                </div>
+                                <div class="route-summary-item">
+                                    <div class="label">Distance</div>
+                                    <div class="value" id="previewDistance">~5,837 km</div>
+                                </div>
+                            </div>
+                            <div style="margin-top:15px;text-align:center;color:#6c757d;font-size:13px">
+                                <span>✅ Route will be displayed on map based on addresses entered above</span>
+                            </div>
+                        </div>
+
+                        <!-- Shipment Details -->
+                        <div class="form-section">
+                            <div class="section-label">📦 Shipment Details</div>
+                            <div class="form-grid">
+                                <div class="form-group"><label>Package Type <span class="required">*</span></label><select class="form-control" id="packageType" required><option value="">Select Type</option><option value="document">Document/Letter</option><option value="parcel" selected>Parcel/Package</option><option value="express">Express Document</option><option value="freight">Freight/Heavy</option><option value="fragile">Fragile Items</option></select></div>
+                                <div class="form-group"><label>Shipping Method <span class="required">*</span></label><select class="form-control" id="shippingMethod" required onchange="updateServiceType()"><option value="">Select Method</option><option value="standard">Standard Post</option><option value="registered">Registered Mail</option><option value="express" selected>Express (EMS)</option><option value="priority">Priority Mail</option><option value="economy">Economy</option></select></div>
+                                <div class="form-group"><label>Weight (kg)</label><input type="number" class="form-control" id="weight" step="0.1" placeholder="2.5"></div>
+                                <div class="form-group"><label>Dimensions (cm)</label><input type="text" class="form-control" id="dimensions" placeholder="30x20x10"></div>
+                                <div class="form-group"><label>Declared Value</label><input type="text" class="form-control" id="declaredValue" placeholder="$100.00"></div>
+                                <div class="form-group"><label>Insurance</label><select class="form-control" id="insurance"><option value="none">No Insurance</option><option value="basic">Basic Coverage</option><option value="full">Full Coverage</option></select></div>
+                                <div class="form-group full-width"><label>Description/Contents</label><textarea class="form-control" id="contents" placeholder="Brief description of package contents..."></textarea></div>
+                                <div class="form-group full-width"><label>Special Instructions</label><textarea class="form-control" id="instructions" placeholder="Any special handling instructions..."></textarea></div>
+                            </div>
+                        </div>
+
+                        <!-- Transit Hub Details -->
+                        <div class="form-section">
+                            <div class="section-label">🌐 Transit Information</div>
+                            <div class="form-grid">
+                                <div class="form-group"><label>Transit Hub City</label><input type="text" class="form-control" id="transitCity" placeholder="Amsterdam" value="Amsterdam"></div>
+                                <div class="form-group"><label>Transit Hub Country</label><select class="form-control" id="transitCountry">
+                                    <option value="">Select Country</option>
+                                    <option value="NL" selected>Netherlands</option>
+                                    <option value="DE">Germany</option>
+                                    <option value="FR">France</option>
+                                    <option value="GB">United Kingdom</option>
+                                    <option value="US">United States</option>
+                                    <option value="CN">China</option>
+                                    <option value="AE">UAE (Dubai)</option>
+                                    <option value="SG">Singapore</option>
+                                </select></div>
+                                <div class="form-group full-width"><label>Transit Hub Name</label><input type="text" class="form-control" id="transitHubName" placeholder="Amsterdam Hub" value="Amsterdam Hub"></div>
+                            </div>
+                        </div>
+
+                        <!-- Delivery Dates Section -->
+                        <div class="form-section">
+                            <div class="section-label">📅 Delivery Schedule</div>
+                            <div class="delivery-date-section">
+                                <div class="delivery-date-title">🕐 Set Delivery Timeline</div>
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>Shipment Created Date <span class="required">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="startDate" required>
+                                        <div class="form-hint">When the shipment was created</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Picked Up Date <span class="required">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="pickedUpDate" required>
+                                        <div class="form-hint">When package was picked up from sender</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Departed Origin Date <span class="required">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="departedDate" required>
+                                        <div class="form-hint">When package left origin airport/facility</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>In Transit Date <span class="required">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="transitDate" required>
+                                        <div class="form-hint">When package arrived at transit hub</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Expected Arrival Date <span class="required">*</span></label>
+                                        <input type="datetime-local" class="form-control" id="expectedArrival" required>
+                                        <div class="form-hint">When package is expected at destination airport</div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>Estimated Delivery Date</label>
+                                        <input type="datetime-local" class="form-control" id="estimatedDelivery">
+                                        <div class="form-hint">Final delivery to receiver's address</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Tracking Configuration -->
+                        <div class="form-section">
+                            <div class="section-label">🔢 Tracking Configuration</div>
+                            <div class="form-grid">
+                                <div class="form-group"><label>Service Indicator <span class="required">*</span></label><select class="form-control" id="serviceIndicator" required><option value="E" selected>E - Express (EMS)</option><option value="R">R - Registered Mail</option><option value="C">C - Parcel Post</option><option value="L">L - Letter Post</option><option value="H">H - E-Commerce</option><option value="V">V - Insured Letter</option></select></div>
+                                <div class="form-group"><label>Second Letter</label><select class="form-control" id="secondLetter"><option value="X" selected>X</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="Z">Z</option></select></div>
+                                <div class="form-group"><label>Origin Country Code <span class="required">*</span></label><select class="form-control" id="originCountryCode" required>
+                                    <option value="">Select Origin Country</option>
+                                    <option value="US">US - United States</option>
+                                    <option value="GB">GB - United Kingdom</option>
+                                    <option value="CN">CN - China</option>
+                                    <option value="DE">DE - Germany</option>
+                                    <option value="FR" selected>FR - France</option>
+                                    <option value="JP">JP - Japan</option>
+                                    <option value="IN">IN - India</option>
+                                    <option value="BR">BR - Brazil</option>
+                                    <option value="CA">CA - Canada</option>
+                                    <option value="AU">AU - Australia</option>
+                                    <option value="MX">MX - Mexico</option>
+                                    <option value="NL">NL - Netherlands</option>
+                                </select></div>
+                            </div>
+                        </div>
+
+                        <!-- Customer Care Contact -->
+                        <div class="form-section">
+                            <div class="section-label">📞 Customer Care Contact</div>
+                            <div class="form-grid">
+                                <div class="form-group"><label>Customer Care Number <span class="required">*</span></label><input type="tel" class="form-control" id="customerCareNumber" required placeholder="+1 800 UPU HELP" value="+1 800 123 4567"></div>
+                                <div class="form-group"><label>Alternative Number</label><input type="tel" class="form-control" id="customerCareAlt" placeholder="+1 700 UPU CARE"></div>
+                                <div class="form-group"><label>Support Email</label><input type="email" class="form-control" id="customerCareEmail" placeholder="support@upu.post" value="support@upu.post"></div>
+                                <div class="form-group full-width"><label>Office Hours</label><input type="text" class="form-control" id="customerCareHours" placeholder="Mon-Fri: 8AM - 6PM, Sat: 9AM - 2PM" value="Mon-Fri: 8AM - 6PM, Sat: 9AM - 2PM"></div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn" style="margin-top:20px">🚀 Generate Tracking Number & Create Shipment</button>
+                    </form>
+
+                    <div class="tracking-result" id="createResult" style="display:none">
+                        <div class="tracking-number-display" id="generatedNumber"></div>
+                        <div class="tracking-meta"><span class="meta-tag" id="resultService" style="color:#1976d2"></span><span class="meta-tag" id="resultCountry" style="color:#388e3c"></span><span class="meta-tag" id="resultSerial" style="color:#f57c00"></span></div>
+                        
+                        <!-- Delivery Dates Display -->
+                        <div class="delivery-date-section" id="deliveryDatesDisplay" style="display:none">
+                            <div class="delivery-date-title">📅 Delivery Schedule</div>
+                            <div class="form-grid">
+                                <div class="date-display">
+                                    <div class="label">Shipment Created</div>
+                                    <div class="value" id="displayStartDate">--</div>
+                                    <div class="sub" id="displayStartDateFormatted">--</div>
+                                </div>
+                                <div class="date-display">
+                                    <div class="label">Expected Arrival</div>
+                                    <div class="value" id="displayArrivalDate">--</div>
+                                    <div class="sub" id="displayArrivalDateFormatted">--</div>
+                                </div>
+                            </div>
+                            <div class="countdown-box" id="countdownBox">
+                                <div class="label">Time Until Arrival</div>
+                                <div class="timer" id="countdownTimer">--:--:--</div>
+                                <div class="status" id="countdownStatus">Package in transit</div>
+                            </div>
+                        </div>
+
+                        <div class="customer-care-section">
+                            <div class="customer-care-title">📞 Customer Care Contact</div>
+                            <div class="customer-care-grid">
+                                <div class="detail-item">
+                                    <div class="detail-label">Primary Number</div>
+                                    <div class="detail-value" id="displayCustomerCare" style="font-size:18px;color:var(--primary);font-weight:700"></div>
+                                </div>
+                                <div class="detail-item">
+                                    <div class="detail-label">Support Email</div>
+                                    <div class="detail-value" id="displayCustomerEmail"></div>
+                                </div>
+                                <div class="detail-item full-width">
+                                    <div class="detail-label">Office Hours</div>
+                                    <div class="detail-value" id="displayCustomerHours"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="shipment-details" id="shipmentSummary"></div>
+                        <div class="action-buttons">
+                            <button class="btn-icon copy" onclick="copyNumber()">📋 Copy Number</button>
+                            <button class="btn-icon share" onclick="shareShipment()">📤 Share Details</button>
+                            <button class="btn-icon qr" onclick="showQR()">📱 QR Code</button>
+                            <button class="btn-icon receipt" onclick="generateReceipt()">🧾 Print Receipt</button>
+                            <button class="btn-icon track" onclick="openLiveTrack(currentShipment.id)">🗺️ Live Track</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Batch Section -->
+            <section class="content-section" id="batch">
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">📦 Batch Shipment Creator</h2></div>
+                    <div class="batch-options">
+                        <div class="option-row"><label>Quantity:</label><input type="range" class="range-input" id="batchQuantity" min="1" max="50" value="5" oninput="document.getElementById('rangeValue').textContent=this.value"><span class="range-value" id="rangeValue">5</span></div>
+                        <div class="form-grid" style="margin-top:20px">
+                            <div class="form-group"><label>Default Service</label><select class="form-control" id="batchService"><option value="E" selected>Express (EMS)</option><option value="R">Registered</option><option value="C">Parcel</option><option value="L">Letter</option></select></div>
+                            <div class="form-group"><label>Origin Country</label><select class="form-control" id="batchCountry">
+                                <option value="US" selected>United States</option>
+                                <option value="GB">United Kingdom</option>
+                                <option value="CN">China</option>
+                                <option value="DE">Germany</option>
+                                <option value="FR">France</option>
+                            </select></div>
+                            <div class="form-group"><label>Package Type</label><select class="form-control" id="batchPackageType"><option value="parcel" selected>Parcel</option><option value="document">Document</option><option value="express">Express</option></select></div>
+                            <div class="form-group"><label>Customer Care Number</label><input type="tel" class="form-control" id="batchCustomerCare" value="+1 800 123 4567"></div>
+                        </div>
+                    </div>
+                    <button class="btn" onclick="generateBatch()">⚡ Generate Batch Shipments</button>
+                    <div id="batchResults" style="display:none;margin-top:30px">
+                        <div class="card-header"><h3 style="color:var(--primary)">Generated Shipments</h3><div><button class="btn-action" onclick="copyAllBatch()" style="width:auto;padding:10px 16px;font-size:13px">📋 Copy All</button><button class="btn-action" onclick="downloadBatchCSV()" style="width:auto;padding:10px 16px;font-size:13px">💾 CSV</button></div></div>
+                        <div class="tracking-list" id="batchList"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Shipments List Section -->
+            <section class="content-section" id="shipments">
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">🚚 All Shipments</h2></div>
+                    <div class="search-bar"><input type="text" class="form-control search-input" id="searchShipments" placeholder="🔍 Search tracking number, name, or address..." oninput="renderShipments()"><select class="form-control filter-select" id="filterStatus" onchange="renderShipments()"><option value="">All Status</option><option value="active">Active</option><option value="transit">In Transit</option><option value="arrived">Arrived</option><option value="delivered">Delivered</option></select><select class="form-control filter-select" id="filterService" onchange="renderShipments()"><option value="">All Services</option><option value="E">Express</option><option value="R">Registered</option><option value="C">Parcel</option></select></div>
+                    <div class="tracking-list" id="shipmentsList"><div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No shipments yet</div><div class="empty-subtext">Create your first shipment to see it here</div></div></div>
+                </div>
+            </section>
+
+            <!-- Quick Track Section -->
+            <section class="content-section" id="tracking">
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">🔍 Quick Track</h2></div>
+                    <div class="form-group" style="margin-bottom:20px"><label>Enter Tracking Number</label><div style="display:flex;gap:10px"><input type="text" class="form-control" id="trackInput" placeholder="EE123456789FR" style="flex:1;text-transform:uppercase"><button class="btn" onclick="quickTrack()" style="width:auto;padding:14px 30px">Track</button></div></div>
+                    <div id="trackResult" style="display:none"></div>
+                </div>
+            </section>
+
+            <!-- LIVE MAP TRACKING SECTION -->
+            <section class="content-section" id="liveTrack">
+                <div class="card">
+                    <div class="card-header">
+                        <h2 class="card-title">🗺️ Live Package Tracking</h2>
+                        <div style="display:flex;align-items:center;gap:10px">
+                            <select class="form-control" id="liveTrackSelect" style="width:250px" onchange="loadLiveTracking()">
+                                <option value="">Select a shipment to track...</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div id="liveTrackContent" style="display:none">
+                        <div class="progress-track">
+                            <div class="progress-fill" id="deliveryProgress" style="width:0%"></div>
+                        </div>
+                        
+                        <div class="tracking-dashboard">
+                            <div class="timeline-panel">
+                                <div class="timeline-header">
+                                    <h3>📋 Delivery Status</h3>
+                                    <span class="delivery-status-badge status-transit-badge" id="liveStatusBadge">In Transit</span>
+                                </div>
+                                
+                                <div class="vertical-timeline" id="verticalTimeline"></div>
+                                
+                                <div class="countdown-box" id="liveCountdownBox" style="margin-top:20px">
+                                    <div class="label">Expected Arrival In</div>
+                                    <div class="timer" id="liveCountdownTimer">--:--:--</div>
+                                    <div class="status" id="liveCountdownStatus">Calculating...</div>
+                                </div>
+                                
+                                <div class="agent-section" id="liveAgentSection" style="display:none;margin-top:20px">
+                                    <div class="agent-title">🚚 Your Delivery Agent</div>
+                                    <div class="agent-card">
+                                        <div class="agent-avatar">👤</div>
+                                        <div class="agent-name" id="liveAgentName">Agent Name</div>
+                                        <div class="agent-role">Local Delivery Partner</div>
+                                        <div class="agent-contact">
+                                            <div class="label">Contact Number</div>
+                                            <div class="number" id="liveAgentNumber">+1 555 123 4567</div>
+                                            <div class="email" id="liveAgentEmail">agent@delivery.local</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div style="margin-top:20px;padding:20px;background:linear-gradient(135deg,#e3f2fd 0%,#f3e5f5 100%);border-radius:16px;text-align:center">
+                                    <div style="font-size:36px;margin-bottom:10px">📞</div>
+                                    <div style="font-size:14px;color:#6c757d;margin-bottom:5px">Need Help?</div>
+                                    <div style="font-size:20px;font-weight:700;color:var(--primary)" id="liveCustomerCare">+1 800 123 4567</div>
+                                    <div style="font-size:13px;color:#6c757d;margin-top:5px" id="liveCustomerHours">Mon-Fri: 8AM - 6PM</div>
+                                </div>
+                            </div>
+                            
+                            <div class="map-panel">
+                                <div class="map-header">
+                                    <h3>🌍 Live Location <span class="live-indicator" id="liveIndicator"><span class="live-dot"></span>LIVE</span></h3>
+                                    <div class="map-stats">
+                                        <div class="map-stat"><strong id="liveDistance">0 km</strong><span style="font-size:11px;color:#6c757d">Distance</span></div>
+                                        <div class="map-stat"><strong id="liveSpeed">45 km/h</strong><span style="font-size:11px;color:#6c757d">Avg Speed</span></div>
+                                        <div class="map-stat"><strong id="liveETA">2h 15m</strong><span style="font-size:11px;color:#6c757d">ETA</span></div>
+                                    </div>
+                                </div>
+                                <div id="trackingMap"></div>
+                                
+                                <div class="route-info">
+                                    <div class="route-card">
+                                        <div class="route-card-icon">📦</div>
+                                        <div class="route-card-label">Origin</div>
+                                        <div class="route-card-value" id="routeOrigin">Paris, FR</div>
+                                        <div class="route-card-sub" id="routeOriginTime">Jul 20, 4:36 PM</div>
+                                    </div>
+                                    <div class="route-card">
+                                        <div class="route-card-icon">🚚</div>
+                                        <div class="route-card-label">Current</div>
+                                        <div class="route-card-value" id="routeCurrent">In Transit</div>
+                                        <div class="route-card-sub" id="routeCurrentLocation">Atlantic Ocean</div>
+                                    </div>
+                                    <div class="route-card">
+                                        <div class="route-card-icon">🏠</div>
+                                        <div class="route-card-label">Destination</div>
+                                        <div class="route-card-value" id="routeDest">New York, US</div>
+                                        <div class="route-card-sub" id="routeDestTime">Est. Jul 25, 9:16 AM</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="empty-state" id="liveTrackEmpty">
+                        <div class="empty-icon">🗺️</div>
+                        <div class="empty-text">Select a shipment to view live tracking</div>
+                        <div style="color:#6c757d;font-size:14px;margin-top:10px">Choose an active shipment from the dropdown above to see real-time location updates</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DELIVERY MANAGEMENT SECTION -->
+            <section class="content-section" id="deliveryManage">
+                <div class="delivery-panel">
+                    <div class="delivery-panel-header">
+                        <h3>📍 Delivery Management Center</h3>
+                        <p>Update shipment status, manage delivery agents, and send arrival notifications</p>
+                    </div>
+                    
+                    <div class="form-group" style="margin-bottom:25px">
+                        <label style="font-size:16px;font-weight:700;color:var(--primary);margin-bottom:10px;display:block">Select Shipment to Manage</label>
+                        <select class="form-control" id="manageShipmentSelect" onchange="loadShipmentForManagement()" style="font-size:16px;padding:16px">
+                            <option value="">-- Select a shipment --</option>
+                        </select>
+                    </div>
+                    
+                    <div id="manageShipmentContent" style="display:none">
+                        <div style="background:linear-gradient(135deg,var(--primary) 0%,#2a5298 100%);color:#fff;padding:20px;border-radius:16px;margin-bottom:25px">
+                            <div style="font-family:'Courier New',monospace;font-size:24px;font-weight:700;margin-bottom:10px" id="manageTrackingNumber">--</div>
+                            <div style="display:flex;gap:20px;flex-wrap:wrap;font-size:14px;opacity:0.9">
+                                <span>📤 <span id="manageOrigin">--</span></span>
+                                <span>→</span>
+                                <span>📥 <span id="manageDest">--</span></span>
+                                <span>📦 <span id="manageStatus">--</span></span>
+                            </div>
+                        </div>
+                        
+                        <div class="status-update-form">
+                            <h4 style="color:var(--primary);margin-bottom:15px">🔄 Update Shipment Status</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Current Status</label>
+                                    <select class="form-control" id="updateStatus" onchange="handleStatusChange()">
+                                        <option value="active">Active - Created</option>
+                                        <option value="transit">In Transit - Moving</option>
+                                        <option value="arrived">Arrived - At Destination Country</option>
+                                        <option value="out_for_delivery">Out for Delivery</option>
+                                        <option value="delivered">Delivered</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label>Current Location</label>
+                                    <input type="text" class="form-control" id="updateLocation" placeholder="e.g., New York, USA">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Status Note</label>
+                                    <textarea class="form-control" id="updateNote" placeholder="Add details about this status update..."></textarea>
+                                </div>
+                            </div>
+                            <button class="btn btn-success" onclick="updateShipmentStatus()" style="margin-top:15px;width:auto;display:inline-flex">✅ Update Status</button>
+                        </div>
+                        
+                        <div class="delivery-form-section" id="deliveryAgentForm" style="display:none">
+                            <h4>🚚 Assign Delivery Agent</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Agent Name <span class="required">*</span></label>
+                                    <input type="text" class="form-control" id="agentName" placeholder="John Delivery">
+                                </div>
+                                <div class="form-group">
+                                    <label>Agent Phone <span class="required">*</span></label>
+                                    <input type="tel" class="form-control" id="agentPhone" placeholder="+1 555 123 4567">
+                                </div>
+                                <div class="form-group">
+                                    <label>Agent Email</label>
+                                    <input type="email" class="form-control" id="agentEmail" placeholder="agent@delivery.local">
+                                </div>
+                                <div class="form-group">
+                                    <label>Delivery Company</label>
+                                    <input type="text" class="form-control" id="agentCompany" placeholder="Local Express Delivery">
+                                </div>
+                            </div>
+                            <button class="btn btn-info" onclick="assignDeliveryAgent()" style="margin-top:15px;width:auto;display:inline-flex">👤 Assign Agent</button>
+                        </div>
+                        
+                        <div class="notification-section" id="emailNotificationSection" style="display:none">
+                            <div class="notification-title">📧 Send Arrival Notification</div>
+                            <p style="margin-bottom:15px;color:#6c757d;font-size:14px">Send automatic email to sender and receiver that package has arrived in destination country</p>
+                            
+                            <div class="email-preview" id="emailPreview">
+                                <div class="subject">Subject: 🎉 Your Package Has Arrived - UPU Tracking #[TRACKING_NUMBER]</div>
+                                <div style="margin-top:15px">
+                                    Dear [RECEIVER_NAME],<br><br>
+                                    Great news! Your package has arrived in [DESTINATION_COUNTRY].<br><br>
+                                    <strong>Tracking Number:</strong> [TRACKING_NUMBER]<br>
+                                    <strong>Status:</strong> Arrived at Destination Country<br>
+                                    <strong>Location:</strong> [CURRENT_LOCATION]<br><br>
+                                    
+                                    <strong style="color:var(--purple)">🚚 Your Delivery Agent</strong><br>
+                                    Name: [AGENT_NAME]<br>
+                                    Phone: [AGENT_PHONE]<br>
+                                    Email: [AGENT_EMAIL]<br>
+                                    Company: [AGENT_COMPANY]<br><br>
+                                    
+                                    You can now contact your delivery agent to arrange final delivery.<br><br>
+                                    
+                                    Best regards,<br>
+                                    UPU Postal Service
+                                </div>
+                            </div>
+                            
+                            <div style="display:flex;gap:10px;margin-top:15px;flex-wrap:wrap">
+                                <button class="btn btn-success" onclick="sendArrivalNotification()" style="width:auto;display:inline-flex">📧 Send Email Notification</button>
+                                <button class="btn btn-secondary" onclick="previewEmail()" style="width:auto;display:inline-flex">👁 Preview Email</button>
+                            </div>
+                            
+                            <div class="email-status pending" id="emailStatus">
+                                <span>⏳</span> Email not sent yet
+                            </div>
+                        </div>
+                        
+                        <div class="delivery-form-section" id="deliveryCompleteForm" style="display:none">
+                            <h4>✅ Complete Delivery</h4>
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label>Delivery Date & Time</label>
+                                    <input type="datetime-local" class="form-control" id="actualDeliveryDate">
+                                </div>
+                                <div class="form-group">
+                                    <label>Received By</label>
+                                    <input type="text" class="form-control" id="receivedBy" placeholder="Name of person who received">
+                                </div>
+                                <div class="form-group full-width">
+                                    <label>Delivery Notes</label>
+                                    <textarea class="form-control" id="deliveryNotes" placeholder="Any notes about the delivery..."></textarea>
+                                </div>
+                            </div>
+                            <button class="btn btn-success" onclick="completeDelivery()" style="margin-top:15px;width:auto;display:inline-flex">✅ Mark as Delivered</button>
+                        </div>
+                    </div>
+                    
+                    <div class="empty-state" id="manageEmpty">
+                        <div class="empty-icon">📍</div>
+                        <div class="empty-text">Select a shipment to manage delivery</div>
+                        <div style="color:#6c757d;font-size:14px;margin-top:10px">Choose a shipment from the dropdown above to update status and manage delivery</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Analytics Section -->
+            <section class="content-section" id="analytics">
+                <div class="card">
+                    <div class="card-header"><h2 class="card-title">📊 Analytics Dashboard</h2></div>
+                    <div class="stats-grid">
+                        <div class="stat-card"><div class="stat-icon blue">📈</div><div class="stat-info"><h3>This Month</h3><p id="monthlyCount">0</p></div></div>
+                        <div class="stat-card"><div class="stat-icon green">🎯</div><div class="stat-info"><h3>Top Service</h3><p id="topService">-</p></div></div>
+                        <div class="stat-card"><div class="stat-icon orange">🌍</div><div class="stat-info"><h3>Top Route</h3><p id="topRoute">-</p></div></div>
+                        <div class="stat-card"><div class="stat-icon purple">⚡</div><div class="stat-info"><h3>Avg. Weight</h3><p id="avgWeight">-</p></div></div>
+                    </div>
+                    <div style="background:#f8f9fa;border-radius:16px;padding:40px;text-align:center;margin-top:20px"><div style="font-size:48px;margin-bottom:15px">📊</div><h3 style="color:var(--primary);margin-bottom:10px">Detailed Reports</h3><p style="color:#6c757d">Advanced analytics coming soon</p></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modals -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal">
+            <div class="modal-header"><h3 class="modal-title">📋 Shipment Details</h3><button class="modal-close" onclick="closeModal('viewModal')">&times;</button></div>
+            <div class="modal-body" id="viewModalBody"></div>
+            <div class="modal-footer"><button class="btn-modal secondary" onclick="closeModal('viewModal')">Close</button><button class="btn-modal primary" onclick="printShipment()">🖨️ Print</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="qrModal">
+        <div class="modal" style="max-width:400px">
+            <div class="modal-header"><h3 class="modal-title">📱 QR Code</h3><button class="modal-close" onclick="closeModal('qrModal')">&times;</button></div>
+            <div class="modal-body" style="text-align:center"><div class="qr-placeholder">📱</div><p style="font-family:monospace;font-size:18px;font-weight:700;color:var(--primary);margin-bottom:10px" id="qrNumber"></p><p style="color:#6c757d;font-size:14px">Scan to track shipment</p></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="receiptModal">
+        <div class="modal" style="max-width:600px">
+            <div class="modal-header no-print"><h3 class="modal-title">🧾 Shipment Receipt</h3><button class="modal-close" onclick="closeModal('receiptModal')">&times;</button></div>
+            <div class="modal-body" id="receiptModalBody"></div>
+            <div class="modal-footer no-print"><button class="btn-modal secondary" onclick="closeModal('receiptModal')">Close</button><button class="btn-modal primary" onclick="printReceipt()">🖨️ Print Receipt</button></div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="emailPreviewModal">
+        <div class="modal large">
+            <div class="modal-header no-print"><h3 class="modal-title">📧 Email Preview</h3><button class="modal-close" onclick="closeModal('emailPreviewModal')">&times;</button></div>
+            <div class="modal-body" id="emailPreviewModalBody"></div>
+            <div class="modal-footer no-print">
+                <button class="btn-modal secondary" onclick="closeModal('emailPreviewModal')">Close</button>
+                <button class="btn-modal success" onclick="sendArrivalNotification();closeModal('emailPreviewModal')">📧 Send Now</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"><span id="toastIcon">✅</span><span id="toastMessage">Operation successful</span></div>
+
+    <script>
+        // Data Management
+        let shipments = JSON.parse(localStorage.getItem('upu_shipments')) || [];
+        let currentShipment = null;
+        let managingShipment = null;
+        let trackingMap = null;
+        let previewMap = null;
+        let routeLine = null;
+        let previewRouteLine = null;
+        let markers = [];
+        let previewMarkers = [];
+        let animationInterval = null;
+        let countdownInterval = null;
+        
+        const serviceMap = {
+            'E': {name: 'Express (EMS)', code: 'EE'},
+            'R': {name: 'Registered Mail', code: 'RR'},
+            'C': {name: 'Parcel Post', code: 'CP'},
+            'L': {name: 'Letter Post', code: 'LL'},
+            'H': {name: 'E-Commerce', code: 'EA'},
+            'V': {name: 'Insured Letter', code: 'VV'}
+        };
+        
+        const countryMap = {
+            'US': 'United States', 'GB': 'United Kingdom', 'CN': 'China',
+            'DE': 'Germany', 'FR': 'France', 'JP': 'Japan',
+            'IN': 'India', 'BR': 'Brazil', 'CA': 'Canada',
+            'AU': 'Australia', 'MX': 'Mexico', 'IT': 'Italy',
+            'ES': 'Spain', 'NL': 'Netherlands', 'AE': 'UAE', 'SG': 'Singapore'
+        };
+        
+        // CORRECTED: Dynamic city coordinates lookup with proper global coverage
+        const cityCoords = {
+            // France
+            'Paris': [48.8566, 2.3522], 'Lyon': [45.7640, 4.8357],
+            'Marseille': [43.2965, 5.3698], 'Toulouse': [43.6047, 1.4442],
+            'Nice': [43.7102, 7.2620], 'Nantes': [47.2184, -1.5536],
+            'Strasbourg': [48.5734, 7.7521], 'Montpellier': [43.6108, 3.8767],
+            'Bordeaux': [44.8378, -0.5792], 'Lille': [50.6292, 3.0573],
+            
+            // United States
+            'New York': [40.7128, -74.0060], 'Los Angeles': [34.0522, -118.2437],
+            'Chicago': [41.8781, -87.6298], 'Houston': [29.7604, -95.3698],
+            'Miami': [25.7617, -80.1918], 'Seattle': [47.6062, -122.3321],
+            'Atlanta': [33.7490, -84.3880], 'San Francisco': [37.7749, -122.4194],
+            'Boston': [42.3601, -71.0589], 'Dallas': [32.7767, -96.7970],
+            'Denver': [39.7392, -104.9903], 'Washington': [38.9072, -77.0369],
+            'Philadelphia': [39.9526, -75.1652], 'Phoenix': [33.4484, -112.0740],
+            'San Diego': [32.7157, -117.1611], 'Detroit': [42.3314, -83.0458],
+            'Minneapolis': [44.9778, -93.2650], 'Tampa': [27.9506, -82.4572],
+            'Portland': [45.5152, -122.6784], 'Las Vegas': [36.1699, -115.1398],
+            'Nashville': [36.1627, -86.7816], 'New Orleans': [29.9511, -90.0715],
+            
+            // United Kingdom
+            'London': [51.5074, -0.1278], 'Manchester': [53.4808, -2.2426],
+            'Birmingham': [52.4862, -1.8904], 'Liverpool': [53.4084, -2.9916],
+            'Leeds': [53.8008, -1.5491], 'Glasgow': [55.8609, -4.2514],
+            'Sheffield': [53.3811, -1.4701], 'Bristol': [51.4545, -2.5879],
+            'Edinburgh': [55.9533, -3.1883], 'Cardiff': [51.4816, -3.1791],
+            'Belfast': [54.5973, -5.9301], 'Nottingham': [52.9548, -1.1581],
+            
+            // China
+            'Beijing': [39.9042, 116.4074], 'Shanghai': [31.2304, 121.4737],
+            'Guangzhou': [23.1291, 113.2644], 'Shenzhen': [22.5431, 114.0579],
+            'Chengdu': [30.5728, 104.0668], 'Hangzhou': [30.2741, 120.1551],
+            'Wuhan': [30.5928, 114.3055], 'Xi\'an': [34.3416, 108.9398],
+            'Nanjing': [32.0603, 118.7969], 'Chongqing': [29.5630, 106.5516],
+            
+            // Germany
+            'Berlin': [52.5200, 13.4050], 'Munich': [48.1351, 11.5820],
+            'Frankfurt': [50.1109, 8.6821], 'Hamburg': [53.5511, 9.9937],
+            'Cologne': [50.9375, 6.9603], 'Stuttgart': [48.7758, 9.1829],
+            'Düsseldorf': [51.2277, 6.7735], 'Dortmund': [51.5136, 7.4653],
+            
+            // Japan
+            'Tokyo': [35.6762, 139.6503], 'Osaka': [34.6937, 135.5023],
+            'Yokohama': [35.4437, 139.6380], 'Nagoya': [35.1815, 136.9066],
+            'Sapporo': [43.0618, 141.3545], 'Fukuoka': [33.5902, 130.4017],
+            'Kobe': [34.6901, 135.1955], 'Kyoto': [35.0116, 135.7681],
+            
+            // India
+            'Mumbai': [19.0760, 72.8777], 'Delhi': [28.6139, 77.2090],
+            'Bangalore': [12.9716, 77.5946], 'Hyderabad': [17.3850, 78.4867],
+            'Chennai': [13.0827, 80.2707], 'Kolkata': [22.5726, 88.3639],
+            'Pune': [18.5204, 73.8567], 'Ahmedabad': [23.0225, 72.5714],
+            
+            // Brazil
+            'Sao Paulo': [-23.5505, -46.6333], 'Rio de Janeiro': [-22.9068, -43.1729],
+            'Brasilia': [-15.7975, -47.8919], 'Salvador': [-12.9714, -38.5014],
+            'Fortaleza': [-3.7319, -38.5267], 'Belo Horizonte': [-19.9167, -43.9345],
+            
+            // Canada
+            'Toronto': [43.6532, -79.3832], 'Vancouver': [49.2827, -123.1207],
+            'Montreal': [45.5017, -73.5673], 'Calgary': [51.0447, -114.0719],
+            'Ottawa': [45.4215, -75.6972], 'Edmonton': [53.5461, -113.4938],
+            
+            // Australia
+            'Sydney': [-33.8688, 151.2093], 'Melbourne': [-37.8136, 144.9631],
+            'Brisbane': [-27.4698, 153.0251], 'Perth': [-31.9505, 115.8605],
+            'Adelaide': [-34.9285, 138.6007], 'Canberra': [-35.2809, 149.1300],
+            
+            // Mexico
+            'Mexico City': [19.4326, -99.1332], 'Guadalajara': [20.6597, -103.3496],
+            'Monterrey': [25.6866, -100.3161], 'Puebla': [19.0414, -98.2063],
+            
+            // Italy
+            'Rome': [41.9028, 12.4964], 'Milan': [45.4642, 9.1900],
+            'Naples': [40.8518, 14.2681], 'Turin': [45.0703, 7.6869],
+            
+            // Spain
+            'Madrid': [40.4168, -3.7038], 'Barcelona': [41.3851, 2.1734],
+            'Valencia': [39.4699, -0.3763], 'Seville': [37.3891, -5.9845],
+            
+            // Netherlands
+            'Amsterdam': [52.3676, 4.9041], 'Rotterdam': [51.9244, 4.4777],
+            'The Hague': [52.0705, 4.3007], 'Utrecht': [52.0907, 5.1214],
+            
+            // UAE
+            'Dubai': [25.2048, 55.2708], 'Abu Dhabi': [24.4539, 54.3773],
+            'Sharjah': [25.3463, 55.4209],
+            
+            // Singapore
+            'Singapore': [1.3521, 103.8198]
+        };
+        
+        // Country center coordinates (fallback when city not found)
+        const countryCenters = {
+            'US': [39.8283, -98.5795], 'GB': [55.3781, -3.4360],
+            'CN': [35.8617, 104.1954], 'DE': [51.1657, 10.4515],
+            'FR': [46.2276, 2.2137], 'JP': [36.2048, 138.2529],
+            'IN': [20.5937, 78.9629], 'BR': [-14.2350, -51.9253],
+            'CA': [56.1304, -106.3468], 'AU': [-25.2744, 133.7751],
+            'MX': [23.6345, -102.5528], 'IT': [41.8719, 12.5674],
+            'ES': [40.4637, -3.7492], 'NL': [52.1326, 5.2913],
+            'AE': [23.4241, 53.8478], 'SG': [1.3521, 103.8198]
+        };
+        
+        // Country code to ISO mapping
+        const countryToCode = {
+            'United States': 'US', 'United Kingdom': 'GB', 'China': 'CN',
+            'Germany': 'DE', 'France': 'FR', 'Japan': 'JP',
+            'India': 'IN', 'Brazil': 'BR', 'Canada': 'CA',
+            'Australia': 'AU', 'Mexico': 'MX', 'Italy': 'IT',
+            'Spain': 'ES', 'Netherlands': 'NL', 'UAE': 'AE', 'Singapore': 'SG'
+        };
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', function() {
+            updateStats();
+            setDefaultDates();
+            initPreviewMap();
+        });
+
+        function setDefaultDates() {
+            const now = new Date();
+            const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
+            const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+            
+            document.getElementById('startDate').value = now.toISOString().slice(0, 16);
+            document.getElementById('pickedUpDate').value = now.toISOString().slice(0, 16);
+            document.getElementById('departedDate').value = now.toISOString().slice(0, 16);
+            document.getElementById('transitDate').value = tomorrow.toISOString().slice(0, 16);
+            document.getElementById('expectedArrival').value = nextWeek.toISOString().slice(0, 16);
+            document.getElementById('estimatedDelivery').value = nextWeek.toISOString().slice(0, 16);
+        }
+
+        function login() {
+            const password = document.getElementById('adminPassword').value;
+            if (password === 'UPUadmin2024') {
+                document.getElementById('loginScreen').style.display = 'none';
+                document.getElementById('dashboard').classList.add('active');
+                showToast('✅ Welcome, Administrator!');
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+            }
+        }
+
+        function logout() {
+            document.getElementById('dashboard').classList.remove('active');
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('adminPassword').value = '';
+        }
+
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('open');
+            document.getElementById('sidebarOverlay').classList.toggle('show');
+        }
+
+        function showSection(sectionId, navLink) {
+            document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+            document.getElementById(sectionId).classList.add('active');
+            
+            if (navLink) {
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                navLink.classList.add('active');
+            }
+            
+            if (window.innerWidth < 1024) {
+                toggleSidebar();
+            }
+            
+            if (sectionId === 'shipments') renderShipments();
+            if (sectionId === 'liveTrack') updateLiveTrackSelect();
+            if (sectionId === 'deliveryManage') updateManageSelect();
+            if (sectionId === 'analytics') updateAnalytics();
+            
+            // Refresh map if showing live track section
+            if (sectionId === 'liveTrack' && trackingMap) {
+                setTimeout(() => trackingMap.invalidateSize(), 300);
+            }
+        }
+
+        function updateServiceType() {
+            const method = document.getElementById('shippingMethod').value;
+            const indicator = document.getElementById('serviceIndicator');
+            const map = {
+                'express': 'E', 'registered': 'R', 'standard': 'C',
+                'priority': 'E', 'economy': 'C'
+            };
+            if (map[method]) indicator.value = map[method];
+        }
+
+        // Get coordinates for a city/country combination
+        function getCoordinates(city, countryCode) {
+            // Try exact city match first
+            if (cityCoords[city]) {
+                return cityCoords[city];
+            }
+            
+            // Try to find city that contains the search term (case insensitive)
+            const cityLower = city.toLowerCase();
+            for (let [key, coords] of Object.entries(cityCoords)) {
+                if (key.toLowerCase().includes(cityLower) || cityLower.includes(key.toLowerCase())) {
+                    return coords;
+                }
+            }
+            
+            // Fallback to country center
+            if (countryCenters[countryCode]) {
+                return countryCenters[countryCode];
+            }
+            
+            // Default to Paris if nothing found
+            return [48.8566, 2.3522];
+        }
+
+        // Calculate distance between two points in km
+        function calculateDistance(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth's radius in km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon/2) * Math.sin(dLon/2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+            return Math.round(R * c);
+        }
+
+        // Initialize preview map in create form
+        function initPreviewMap() {
+            if (previewMap) return;
+            
+            previewMap = L.map('previewMap').setView([48.8566, 2.3522], 3);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(previewMap);
+            
+            // Initial route display (Paris to New York)
+            updateRoutePreview();
+        }
+
+        // Update route preview based on form inputs
+        function updateRoutePreview() {
+            if (!previewMap) return;
+            
+            const senderCity = document.getElementById('senderCity').value || 'Paris';
+            const senderCountry = document.getElementById('senderCountry').value || 'FR';
+            const receiverCity = document.getElementById('receiverCity').value || 'New York';
+            const receiverCountry = document.getElementById('receiverCountry').value || 'US';
+            
+            const origin = getCoordinates(senderCity, senderCountry);
+            const dest = getCoordinates(receiverCity, receiverCountry);
+            
+            // Clear existing markers and lines
+            previewMarkers.forEach(m => previewMap.removeLayer(m));
+            previewMarkers = [];
+            if (previewRouteLine) {
+                previewMap.removeLayer(previewRouteLine);
+            }
+            
+            // Add origin marker
+            const originMarker = L.marker(origin, {
+                icon: L.divIcon({
+                    className: 'custom-marker origin',
+                    html: '<div style="font-size:20px">📦</div>',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(previewMap).bindPopup(`<b>Origin:</b> ${senderCity}, ${countryMap[senderCountry] || senderCountry}`);
+            previewMarkers.push(originMarker);
+            
+            // Add destination marker
+            const destMarker = L.marker(dest, {
+                icon: L.divIcon({
+                    className: 'custom-marker destination',
+                    html: '<div style="font-size:20px">🏠</div>',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(previewMap).bindPopup(`<b>Destination:</b> ${receiverCity}, ${countryMap[receiverCountry] || receiverCountry}`);
+            previewMarkers.push(destMarker);
+            
+            // Draw route line (curved)
+            const latlngs = [
+                origin,
+                [(origin[0] + dest[0])/2 + (dest[0] > origin[0] ? 10 : -10), (origin[1] + dest[1])/2],
+                dest
+            ];
+            
+            previewRouteLine = L.polyline(latlngs, {
+                color: '#1e3c72',
+                weight: 3,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(previewMap);
+            
+            // Fit bounds
+            previewMap.fitBounds([origin, dest], {padding: [50, 50]});
+            
+            // Update summary
+            document.getElementById('previewOrigin').textContent = `${senderCity}, ${senderCountry}`;
+            document.getElementById('previewDest').textContent = `${receiverCity}, ${receiverCountry}`;
+            const distance = calculateDistance(origin[0], origin[1], dest[0], dest[1]);
+            document.getElementById('previewDistance').textContent = `~${distance.toLocaleString()} km`;
+        }
+
+        function createShipment() {
+            const senderCity = document.getElementById('senderCity').value;
+            const senderCountry = document.getElementById('senderCountry').value;
+            const receiverCity = document.getElementById('receiverCity').value;
+            const receiverCountry = document.getElementById('receiverCountry').value;
+            
+            const originCoords = getCoordinates(senderCity, senderCountry);
+            const destCoords = getCoordinates(receiverCity, receiverCountry);
+            
+            const service = document.getElementById('serviceIndicator').value;
+            const second = document.getElementById('secondLetter').value;
+            const originCode = document.getElementById('originCountryCode').value;
+            const serial = Math.floor(Math.random() * 900000000) + 100000000;
+            const trackingNumber = `${service}${second}${serial}${originCode}`;
+            
+            const shipment = {
+                id: Date.now(),
+                trackingNumber: trackingNumber,
+                service: service,
+                originCountry: originCode,
+                serial: serial,
+                sender: {
+                    name: document.getElementById('senderName').value,
+                    street: document.getElementById('senderStreet').value,
+                    city: senderCity,
+                    state: document.getElementById('senderState').value,
+                    zip: document.getElementById('senderZip').value,
+                    country: senderCountry,
+                    phone: document.getElementById('senderPhone').value,
+                    email: document.getElementById('senderEmail').value,
+                    coords: originCoords
+                },
+                receiver: {
+                    name: document.getElementById('receiverName').value,
+                    street: document.getElementById('receiverStreet').value,
+                    city: receiverCity,
+                    state: document.getElementById('receiverState').value,
+                    zip: document.getElementById('receiverZip').value,
+                    country: receiverCountry,
+                    phone: document.getElementById('receiverPhone').value,
+                    email: document.getElementById('receiverEmail').value,
+                    coords: destCoords
+                },
+                package: {
+                    type: document.getElementById('packageType').value,
+                    method: document.getElementById('shippingMethod').value,
+                    weight: document.getElementById('weight').value,
+                    dimensions: document.getElementById('dimensions').value,
+                    value: document.getElementById('declaredValue').value,
+                    insurance: document.getElementById('insurance').value,
+                    contents: document.getElementById('contents').value,
+                    instructions: document.getElementById('instructions').value
+                },
+                transit: {
+                    city: document.getElementById('transitCity').value,
+                    country: document.getElementById('transitCountry').value,
+                    hubName: document.getElementById('transitHubName').value
+                },
+                dates: {
+                    created: document.getElementById('startDate').value,
+                    pickedUp: document.getElementById('pickedUpDate').value,
+                    departed: document.getElementById('departedDate').value,
+                    inTransit: document.getElementById('transitDate').value,
+                    expectedArrival: document.getElementById('expectedArrival').value,
+                    estimatedDelivery: document.getElementById('estimatedDelivery').value
+                },
+                customerCare: {
+                    number: document.getElementById('customerCareNumber').value,
+                    alt: document.getElementById('customerCareAlt').value,
+                    email: document.getElementById('customerCareEmail').value,
+                    hours: document.getElementById('customerCareHours').value
+                },
+                status: 'active',
+                currentLocation: senderCity + ', ' + countryMap[senderCountry],
+                timeline: [
+                    {status: 'Shipment Created', location: senderCity + ', ' + countryMap[senderCountry], time: new Date().toISOString(), completed: true},
+                    {status: 'Picked Up', location: senderCity + ', ' + countryMap[senderCountry], time: document.getElementById('pickedUpDate').value, completed: true},
+                    {status: 'Departed Origin', location: senderCity + ', ' + countryMap[senderCountry], time: document.getElementById('departedDate').value, completed: true},
+                    {status: 'In Transit', location: document.getElementById('transitHubName').value + ', ' + countryMap[document.getElementById('transitCountry').value], time: document.getElementById('transitDate').value, completed: false, current: true},
+                    {status: 'Arrived at Destination', location: receiverCity + ', ' + countryMap[receiverCountry], time: document.getElementById('expectedArrival').value, completed: false},
+                    {status: 'Out for Delivery', location: receiverCity + ', ' + countryMap[receiverCountry], time: '', completed: false},
+                    {status: 'Delivered', location: receiverCity + ', ' + countryMap[receiverCountry], time: '', completed: false}
+                ],
+                agent: null,
+                emailSent: false
+            };
+            
+            shipments.push(shipment);
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            
+            currentShipment = shipment;
+            displayResult(shipment);
+            updateStats();
+            showToast('✅ Shipment created successfully!');
+            
+            // Reset form
+            document.getElementById('shipmentForm').reset();
+            setDefaultDates();
+            updateRoutePreview(); // Reset map to default
+        }
+
+        function displayResult(shipment) {
+            document.getElementById('createResult').style.display = 'block';
+            document.getElementById('generatedNumber').textContent = shipment.trackingNumber;
+            document.getElementById('resultService').textContent = serviceMap[shipment.service].name;
+            document.getElementById('resultCountry').textContent = countryMap[shipment.originCountry];
+            document.getElementById('resultSerial').textContent = 'SN: ' + shipment.serial;
+            
+            // Display dates
+            document.getElementById('deliveryDatesDisplay').style.display = 'block';
+            const startDate = new Date(shipment.dates.created);
+            const arrivalDate = new Date(shipment.dates.expectedArrival);
+            
+            document.getElementById('displayStartDate').textContent = startDate.toLocaleDateString();
+            document.getElementById('displayStartDateFormatted').textContent = startDate.toLocaleString();
+            document.getElementById('displayArrivalDate').textContent = arrivalDate.toLocaleDateString();
+            document.getElementById('displayArrivalDateFormatted').textContent = arrivalDate.toLocaleString();
+            
+            // Start countdown
+            startCountdown(arrivalDate);
+            
+            // Customer care
+            document.getElementById('displayCustomerCare').textContent = shipment.customerCare.number;
+            document.getElementById('displayCustomerEmail').textContent = shipment.customerCare.email;
+            document.getElementById('displayCustomerHours').textContent = shipment.customerCare.hours;
+            
+            // Summary
+            const summary = document.getElementById('shipmentSummary');
+            summary.innerHTML = `
+                <div class="detail-section">
+                    <div class="detail-title">📤 Sender</div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${shipment.sender.name}</div></div>
+                        <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${shipment.sender.street}, ${shipment.sender.city}, ${shipment.sender.state}</div></div>
+                        <div class="detail-item"><div class="detail-label">Country</div><div class="detail-value">${countryMap[shipment.sender.country]}</div></div>
+                        <div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">${shipment.sender.phone || 'N/A'}</div></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-title">📥 Receiver</div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${shipment.receiver.name}</div></div>
+                        <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${shipment.receiver.street}, ${shipment.receiver.city}, ${shipment.receiver.state}</div></div>
+                        <div class="detail-item"><div class="detail-label">Country</div><div class="detail-value">${countryMap[shipment.receiver.country]}</div></div>
+                        <div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">${shipment.receiver.phone}</div></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-title">📦 Package Details</div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="detail-label">Type</div><div class="detail-value">${shipment.package.type}</div></div>
+                        <div class="detail-item"><div class="detail-label">Method</div><div class="detail-value">${shipment.package.method}</div></div>
+                        <div class="detail-item"><div class="detail-label">Weight</div><div class="detail-value">${shipment.package.weight || 'N/A'} kg</div></div>
+                        <div class="detail-item"><div class="detail-label">Dimensions</div><div class="detail-value">${shipment.package.dimensions || 'N/A'}</div></div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('createResult').scrollIntoView({behavior: 'smooth'});
+        }
+
+        function startCountdown(targetDate) {
+            if (countdownInterval) clearInterval(countdownInterval);
+            
+            function update() {
+                const now = new Date();
+                const diff = targetDate - now;
+                
+                if (diff <= 0) {
+                    document.getElementById('countdownTimer').textContent = '00:00:00';
+                    document.getElementById('countdownStatus').textContent = 'Package arrived!';
+                    return;
+                }
+                
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                document.getElementById('countdownTimer').textContent = 
+                    `${days}d ${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+            }
+            
+            update();
+            countdownInterval = setInterval(update, 1000);
+        }
+
+        function copyNumber() {
+            navigator.clipboard.writeText(currentShipment.trackingNumber);
+            showToast('📋 Tracking number copied!');
+        }
+
+        function shareShipment() {
+            const text = `Track your UPU shipment: ${currentShipment.trackingNumber}\nFrom: ${currentShipment.sender.city}, ${countryMap[currentShipment.sender.country]}\nTo: ${currentShipment.receiver.city}, ${countryMap[currentShipment.receiver.country]}`;
+            navigator.clipboard.writeText(text);
+            showToast('📤 Shipment details copied to clipboard!');
+        }
+
+        function showQR() {
+            document.getElementById('qrNumber').textContent = currentShipment.trackingNumber;
+            document.getElementById('qrModal').classList.add('show');
+        }
+
+        function generateReceipt() {
+            const s = currentShipment;
+            const receiptHTML = `
+                <div class="receipt-print">
+                    <div class="receipt-container">
+                        <div class="receipt-watermark">UPU</div>
+                        <div class="receipt-header">
+                            <div class="receipt-logo">📮</div>
+                            <div class="receipt-title">UPU POSTAL SERVICE</div>
+                            <div class="receipt-subtitle">Universal Postal Union</div>
+                        </div>
+                        <div class="receipt-info">
+                            <div class="receipt-row"><span class="receipt-label">Tracking #:</span><span class="receipt-value">${s.trackingNumber}</span></div>
+                            <div class="receipt-row"><span class="receipt-label">Date:</span><span class="receipt-value">${new Date().toLocaleDateString()}</span></div>
+                            <div class="receipt-row"><span class="receipt-label">Service:</span><span class="receipt-value">${serviceMap[s.service].name}</span></div>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <div class="receipt-info">
+                            <div class="receipt-row"><span class="receipt-label">From:</span><span class="receipt-value">${s.sender.name}</span></div>
+                            <div class="receipt-row"><span class="receipt-label"></span><span class="receipt-value">${s.sender.city}, ${countryMap[s.sender.country]}</span></div>
+                            <div class="receipt-row"><span class="receipt-label">To:</span><span class="receipt-value">${s.receiver.name}</span></div>
+                            <div class="receipt-row"><span class="receipt-label"></span><span class="receipt-value">${s.receiver.city}, ${countryMap[s.receiver.country]}</span></div>
+                        </div>
+                        <div class="receipt-divider"></div>
+                        <div class="receipt-info">
+                            <div class="receipt-row"><span class="receipt-label">Weight:</span><span class="receipt-value">${s.package.weight || 'N/A'} kg</span></div>
+                            <div class="receipt-row"><span class="receipt-label">Dimensions:</span><span class="receipt-value">${s.package.dimensions || 'N/A'}</span></div>
+                            <div class="receipt-row"><span class="receipt-label">Declared Value:</span><span class="receipt-value">${s.package.value || 'N/A'}</span></div>
+                        </div>
+                        <div class="receipt-total">
+                            <span>TOTAL</span>
+                            <span>${s.package.value || '$0.00'}</span>
+                        </div>
+                        <div class="receipt-barcode">
+                            <div class="receipt-barcode-text">*${s.trackingNumber}*</div>
+                        </div>
+                        <div class="receipt-contact">
+                            <div class="receipt-contact-title">📞 CUSTOMER CARE</div>
+                            <div class="receipt-contact-number">${s.customerCare.number}</div>
+                            <div style="font-size:12px;margin-top:5px">${s.customerCare.hours}</div>
+                        </div>
+                        <div class="receipt-footer">
+                            <p>Thank you for using UPU Postal Service</p>
+                            <p>Track online at upu.post</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.getElementById('receiptModalBody').innerHTML = receiptHTML;
+            document.getElementById('receiptModal').classList.add('show');
+        }
+
+        function printReceipt() {
+            window.print();
+        }
+
+        function openLiveTrack(shipmentId) {
+            showSection('liveTrack');
+            updateLiveTrackSelect();
+            document.getElementById('liveTrackSelect').value = shipmentId;
+            loadLiveTracking();
+        }
+
+        function updateLiveTrackSelect() {
+            const select = document.getElementById('liveTrackSelect');
+            select.innerHTML = '<option value="">Select a shipment to track...</option>';
+            shipments.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = `${s.trackingNumber} - ${s.receiver.city}`;
+                select.appendChild(option);
+            });
+        }
+
+        function loadLiveTracking() {
+            const shipmentId = document.getElementById('liveTrackSelect').value;
+            if (!shipmentId) {
+                document.getElementById('liveTrackContent').style.display = 'none';
+                document.getElementById('liveTrackEmpty').style.display = 'block';
+                return;
+            }
+            
+            const shipment = shipments.find(s => s.id == shipmentId);
+            if (!shipment) return;
+            
+            document.getElementById('liveTrackEmpty').style.display = 'none';
+            document.getElementById('liveTrackContent').style.display = 'block';
+            
+            // Update status badge
+            const statusBadge = document.getElementById('liveStatusBadge');
+            statusBadge.className = 'delivery-status-badge';
+            if (shipment.status === 'delivered') statusBadge.classList.add('status-delivered-badge');
+            else if (shipment.status === 'arrived') statusBadge.classList.add('status-arrived-badge');
+            else if (shipment.status === 'transit') statusBadge.classList.add('status-transit-badge');
+            else statusBadge.classList.add('status-active-badge');
+            statusBadge.textContent = shipment.status.toUpperCase();
+            
+            // Update timeline
+            const timeline = document.getElementById('verticalTimeline');
+            timeline.innerHTML = '';
+            shipment.timeline.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = 'v-timeline-item';
+                if (item.completed) div.classList.add('active', 'completed');
+                if (item.current) div.classList.add('current');
+                
+                div.innerHTML = `
+                    <div class="v-timeline-content">
+                        <div class="v-timeline-status">${item.completed ? '✅' : item.current ? '📍' : '⏳'} ${item.status}</div>
+                        <div class="v-timeline-location">📍 ${item.location}</div>
+                        <div class="v-timeline-time">${item.time ? new Date(item.time).toLocaleString() : 'Pending'}</div>
+                    </div>
+                `;
+                timeline.appendChild(div);
+            });
+            
+            // Update countdown
+            const arrivalDate = new Date(shipment.dates.expectedArrival);
+            startLiveCountdown(arrivalDate);
+            
+            // Update agent info
+            if (shipment.agent) {
+                document.getElementById('liveAgentSection').style.display = 'block';
+                document.getElementById('liveAgentName').textContent = shipment.agent.name;
+                document.getElementById('liveAgentNumber').textContent = shipment.agent.phone;
+                document.getElementById('liveAgentEmail').textContent = shipment.agent.email || 'N/A';
+            } else {
+                document.getElementById('liveAgentSection').style.display = 'none';
+            }
+            
+            // Update customer care
+            document.getElementById('liveCustomerCare').textContent = shipment.customerCare.number;
+            document.getElementById('liveCustomerHours').textContent = shipment.customerCare.hours;
+            
+            // Update route info
+            document.getElementById('routeOrigin').textContent = `${shipment.sender.city}, ${shipment.sender.country}`;
+            document.getElementById('routeOriginTime').textContent = new Date(shipment.dates.created).toLocaleString();
+            document.getElementById('routeDest').textContent = `${shipment.receiver.city}, ${shipment.receiver.country}`;
+            document.getElementById('routeDestTime').textContent = 'Est. ' + new Date(shipment.dates.estimatedDelivery).toLocaleString();
+            
+            // Calculate progress
+            const progress = calculateProgress(shipment);
+            document.getElementById('deliveryProgress').style.width = progress + '%';
+            
+            // Update map
+            updateTrackingMap(shipment);
+            
+            // Update stats
+            const origin = shipment.sender.coords;
+            const dest = shipment.receiver.coords;
+            const distance = calculateDistance(origin[0], origin[1], dest[0], dest[1]);
+            document.getElementById('liveDistance').textContent = distance.toLocaleString() + ' km';
+            
+            // Estimate speed and ETA based on status
+            let speed = 45; // default
+            let eta = 'Calculating...';
+            if (shipment.status === 'active') { speed = 0; eta = 'Not departed'; }
+            else if (shipment.status === 'transit') { speed = 850; eta = Math.round(distance/speed) + ' hours'; }
+            else if (shipment.status === 'arrived') { speed = 0; eta = 'At destination'; }
+            else if (shipment.status === 'delivered') { speed = 0; eta = 'Delivered'; }
+            
+            document.getElementById('liveSpeed').textContent = speed > 0 ? speed + ' km/h' : '0 km/h';
+            document.getElementById('liveETA').textContent = eta;
+            
+            // Update current location text
+            const currentStatus = shipment.timeline.find(t => t.current);
+            document.getElementById('routeCurrent').textContent = currentStatus ? currentStatus.status : 'In Transit';
+            document.getElementById('routeCurrentLocation').textContent = shipment.currentLocation || 'In Transit';
+        }
+
+        function startLiveCountdown(targetDate) {
+            const timer = document.getElementById('liveCountdownTimer');
+            const status = document.getElementById('liveCountdownStatus');
+            
+            function update() {
+                const now = new Date();
+                const diff = targetDate - now;
+                
+                if (diff <= 0) {
+                    timer.textContent = '00:00:00';
+                    status.textContent = 'Package arrived at destination!';
+                    return;
+                }
+                
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+                
+                timer.textContent = `${days}d ${hours.toString().padStart(2,'0')}:${minutes.toString().padStart(2,'0')}:${seconds.toString().padStart(2,'0')}`;
+                status.textContent = 'Package in transit to destination';
+            }
+            
+            update();
+            if (window.liveCountdownInterval) clearInterval(window.liveCountdownInterval);
+            window.liveCountdownInterval = setInterval(update, 1000);
+        }
+
+        function calculateProgress(shipment) {
+            const steps = ['active', 'transit', 'arrived', 'out_for_delivery', 'delivered'];
+            const currentIndex = steps.indexOf(shipment.status);
+            if (currentIndex === -1) return 0;
+            return ((currentIndex + 1) / steps.length) * 100;
+        }
+
+        function updateTrackingMap(shipment) {
+            if (!trackingMap) {
+                trackingMap = L.map('trackingMap');
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '© OpenStreetMap contributors'
+                }).addTo(trackingMap);
+            }
+            
+            // Clear existing layers
+            markers.forEach(m => trackingMap.removeLayer(m));
+            markers = [];
+            if (routeLine) trackingMap.removeLayer(routeLine);
+            if (animationInterval) clearInterval(animationInterval);
+            
+            const origin = shipment.sender.coords;
+            const dest = shipment.receiver.coords;
+            
+            // Add origin marker
+            const originMarker = L.marker(origin, {
+                icon: L.divIcon({
+                    className: 'custom-marker origin',
+                    html: '<div style="font-size:20px">📦</div>',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(trackingMap).bindPopup(`<b>Origin:</b> ${shipment.sender.city}`);
+            markers.push(originMarker);
+            
+            // Add destination marker
+            const destMarker = L.marker(dest, {
+                icon: L.divIcon({
+                    className: 'custom-marker destination',
+                    html: '<div style="font-size:20px">🏠</div>',
+                    iconSize: [44, 44],
+                    iconAnchor: [22, 22]
+                })
+            }).addTo(trackingMap).bindPopup(`<b>Destination:</b> ${shipment.receiver.city}`);
+            markers.push(destMarker);
+            
+            // Draw route
+            const latlngs = [origin, dest];
+            routeLine = L.polyline(latlngs, {
+                color: '#1e3c72',
+                weight: 4,
+                opacity: 0.7,
+                dashArray: '10, 10'
+            }).addTo(trackingMap);
+            
+            // Add animated current position marker if in transit
+            if (shipment.status === 'transit' || shipment.status === 'active') {
+                const currentPos = calculateCurrentPosition(origin, dest, shipment);
+                const currentMarker = L.marker(currentPos, {
+                    icon: L.divIcon({
+                        className: 'custom-marker current',
+                        html: '<div style="font-size:20px">🚚</div>',
+                        iconSize: [44, 44],
+                        iconAnchor: [22, 22]
+                    })
+                }).addTo(trackingMap).bindPopup('<b>Current Location</b><br>Package in transit');
+                markers.push(currentMarker);
+                
+                // Animate marker
+                let progress = 0;
+                animationInterval = setInterval(() => {
+                    progress += 0.005;
+                    if (progress > 1) progress = 0;
+                    const newPos = [
+                        origin[0] + (dest[0] - origin[0]) * progress,
+                        origin[1] + (dest[1] - origin[1]) * progress
+                    ];
+                    currentMarker.setLatLng(newPos);
+                }, 100);
+            }
+            
+            // Fit bounds
+            trackingMap.fitBounds([origin, dest], {padding: [50, 50]});
+            
+            // Fix map rendering
+            setTimeout(() => trackingMap.invalidateSize(), 100);
+        }
+
+        function calculateCurrentPosition(origin, dest, shipment) {
+            // Calculate based on time elapsed
+            const now = new Date();
+            const start = new Date(shipment.dates.departed);
+            const end = new Date(shipment.dates.expectedArrival);
+            
+            if (now >= end) return dest;
+            if (now <= start) return origin;
+            
+            const total = end - start;
+            const elapsed = now - start;
+            const progress = elapsed / total;
+            
+            return [
+                origin[0] + (dest[0] - origin[0]) * progress,
+                origin[1] + (dest[1] - origin[1]) * progress
+            ];
+        }
+
+        function updateManageSelect() {
+            const select = document.getElementById('manageShipmentSelect');
+            select.innerHTML = '<option value="">-- Select a shipment --</option>';
+            shipments.forEach(s => {
+                const option = document.createElement('option');
+                option.value = s.id;
+                option.textContent = `${s.trackingNumber} - ${s.receiver.city}`;
+                select.appendChild(option);
+            });
+        }
+
+        function loadShipmentForManagement() {
+            const shipmentId = document.getElementById('manageShipmentSelect').value;
+            if (!shipmentId) {
+                document.getElementById('manageShipmentContent').style.display = 'none';
+                document.getElementById('manageEmpty').style.display = 'block';
+                return;
+            }
+            
+            const shipment = shipments.find(s => s.id == shipmentId);
+            if (!shipment) return;
+            
+            managingShipment = shipment;
+            
+            document.getElementById('manageEmpty').style.display = 'none';
+            document.getElementById('manageShipmentContent').style.display = 'block';
+            
+            document.getElementById('manageTrackingNumber').textContent = shipment.trackingNumber;
+            document.getElementById('manageOrigin').textContent = `${shipment.sender.city}, ${shipment.sender.country}`;
+            document.getElementById('manageDest').textContent = `${shipment.receiver.city}, ${shipment.receiver.country}`;
+            document.getElementById('manageStatus').textContent = shipment.status.toUpperCase();
+            
+            // Set current status
+            document.getElementById('updateStatus').value = shipment.status;
+            document.getElementById('updateLocation').value = shipment.currentLocation || '';
+            
+            handleStatusChange();
+        }
+
+        function handleStatusChange() {
+            const status = document.getElementById('updateStatus').value;
+            
+            document.getElementById('deliveryAgentForm').style.display = 
+                (status === 'arrived' || status === 'out_for_delivery') ? 'block' : 'none';
+            document.getElementById('emailNotificationSection').style.display = 
+                status === 'arrived' ? 'block' : 'none';
+            document.getElementById('deliveryCompleteForm').style.display = 
+                status === 'delivered' ? 'block' : 'none';
+        }
+
+        function updateShipmentStatus() {
+            if (!managingShipment) return;
+            
+            const status = document.getElementById('updateStatus').value;
+            const location = document.getElementById('updateLocation').value;
+            const note = document.getElementById('updateNote').value;
+            
+            managingShipment.status = status;
+            managingShipment.currentLocation = location;
+            
+            // Update timeline
+            const now = new Date().toISOString();
+            managingShipment.timeline.forEach(t => {
+                if (t.status.toLowerCase().includes(status.replace('_', ' '))) {
+                    t.completed = true;
+                    t.current = false;
+                    t.time = now;
+                    t.location = location;
+                }
+            });
+            
+            // Set next step as current
+            const currentIndex = managingShipment.timeline.findIndex(t => t.completed && !t.current);
+            if (currentIndex >= 0 && currentIndex < managingShipment.timeline.length - 1) {
+                managingShipment.timeline[currentIndex + 1].current = true;
+            }
+            
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            
+            showToast('✅ Status updated successfully!');
+            loadShipmentForManagement();
+        }
+
+        function assignDeliveryAgent() {
+            if (!managingShipment) return;
+            
+            managingShipment.agent = {
+                name: document.getElementById('agentName').value,
+                phone: document.getElementById('agentPhone').value,
+                email: document.getElementById('agentEmail').value,
+                company: document.getElementById('agentCompany').value
+            };
+            
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            showToast('👤 Delivery agent assigned!');
+        }
+
+        function sendArrivalNotification() {
+            if (!managingShipment) return;
+            
+            managingShipment.emailSent = true;
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            
+            document.getElementById('emailStatus').className = 'email-status sent';
+            document.getElementById('emailStatus').innerHTML = '<span>✅</span> Email sent successfully';
+            
+            showToast('📧 Arrival notification sent!');
+        }
+
+        function previewEmail() {
+            if (!managingShipment) return;
+            
+            const html = `
+                <div style="max-width:600px;margin:0 auto;font-family:Arial,sans-serif">
+                    <div style="background:linear-gradient(135deg,#1e3c72 0%,#2a5298 100%);color:#fff;padding:30px;text-align:center;border-radius:16px 16px 0 0">
+                        <h2>📧 UPU Postal Service</h2>
+                        <p>Arrival Notification</p>
+                    </div>
+                    <div style="padding:30px;background:#fff;border:1px solid #e9ecef;border-top:none">
+                        <p>Dear ${managingShipment.receiver.name},</p>
+                        <p>Great news! Your package has arrived in ${countryMap[managingShipment.receiver.country]}.</p>
+                        <div style="background:#f8f9fa;padding:20px;border-radius:12px;margin:20px 0">
+                            <p><strong>Tracking Number:</strong> ${managingShipment.trackingNumber}</p>
+                            <p><strong>Status:</strong> Arrived at Destination Country</p>
+                            <p><strong>Location:</strong> ${managingShipment.currentLocation}</p>
+                        </div>
+                        ${managingShipment.agent ? `
+                        <div style="background:#f3e5f5;padding:20px;border-radius:12px;margin:20px 0">
+                            <h4 style="color:#6f42c1;margin-bottom:15px">🚚 Your Delivery Agent</h4>
+                            <p><strong>Name:</strong> ${managingShipment.agent.name}</p>
+                            <p><strong>Phone:</strong> ${managingShipment.agent.phone}</p>
+                            <p><strong>Email:</strong> ${managingShipment.agent.email || 'N/A'}</p>
+                            <p><strong>Company:</strong> ${managingShipment.agent.company || 'N/A'}</p>
+                        </div>
+                        ` : ''}
+                        <p>You can now contact your delivery agent to arrange final delivery.</p>
+                        <p>Best regards,<br>UPU Postal Service</p>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('emailPreviewModalBody').innerHTML = html;
+            document.getElementById('emailPreviewModal').classList.add('show');
+        }
+
+        function completeDelivery() {
+            if (!managingShipment) return;
+            
+            managingShipment.status = 'delivered';
+            managingShipment.deliveredDate = document.getElementById('actualDeliveryDate').value;
+            managingShipment.receivedBy = document.getElementById('receivedBy').value;
+            managingShipment.deliveryNotes = document.getElementById('deliveryNotes').value;
+            
+            managingShipment.timeline.forEach(t => {
+                if (t.status === 'Delivered') {
+                    t.completed = true;
+                    t.current = false;
+                    t.time = new Date().toISOString();
+                }
+            });
+            
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            showToast('✅ Delivery completed!');
+            loadShipmentForManagement();
+        }
+
+        function renderShipments() {
+            const list = document.getElementById('shipmentsList');
+            const search = document.getElementById('searchShipments').value.toLowerCase();
+            const statusFilter = document.getElementById('filterStatus').value;
+            const serviceFilter = document.getElementById('filterService').value;
+            
+            let filtered = shipments.filter(s => {
+                const matchesSearch = !search || 
+                    s.trackingNumber.toLowerCase().includes(search) ||
+                    s.sender.name.toLowerCase().includes(search) ||
+                    s.receiver.name.toLowerCase().includes(search) ||
+                    s.sender.city.toLowerCase().includes(search) ||
+                    s.receiver.city.toLowerCase().includes(search);
+                
+                const matchesStatus = !statusFilter || s.status === statusFilter;
+                const matchesService = !serviceFilter || s.service === serviceFilter;
+                
+                return matchesSearch && matchesStatus && matchesService;
+            });
+            
+            if (filtered.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <div class="empty-icon">📭</div>
+                        <div class="empty-text">No shipments found</div>
+                        <div style="color:#6c757d;font-size:14px">Try adjusting your search or filters</div>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = filtered.map(s => `
+                <div class="tracking-item">
+                    <div class="tracking-header">
+                        <div class="tracking-id">${s.trackingNumber}</div>
+                        <span class="tracking-status status-${s.status}">${s.status.toUpperCase()}</span>
+                    </div>
+                    <div class="tracking-route">
+                        <span>📦 ${s.sender.city}, ${s.sender.country}</span>
+                        <span class="route-arrow">→</span>
+                        <span>🏠 ${s.receiver.city}, ${s.receiver.country}</span>
+                    </div>
+                    <div class="tracking-info-grid">
+                        <div class="info-item"><div class="info-label">Service</div><div class="info-value">${serviceMap[s.service].name}</div></div>
+                        <div class="info-item"><div class="info-label">Created</div><div class="info-value">${new Date(s.dates.created).toLocaleDateString()}</div></div>
+                        <div class="info-item"><div class="info-label">Weight</div><div class="info-value">${s.package.weight || 'N/A'} kg</div></div>
+                        <div class="info-item"><div class="info-label">Status</div><div class="info-value">${s.currentLocation || 'In Transit'}</div></div>
+                    </div>
+                    <div class="tracking-actions">
+                        <button class="btn-small view" onclick="viewShipment(${s.id})">👁 View</button>
+                        <button class="btn-small track" onclick="openLiveTrack(${s.id})">🗺️ Track</button>
+                        <button class="btn-small receipt" onclick="currentShipment=shipments.find(x=>x.id==${s.id});generateReceipt()">🧾 Receipt</button>
+                        <button class="btn-small delete" onclick="deleteShipment(${s.id})">🗑 Delete</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function viewShipment(id) {
+            const s = shipments.find(x => x.id === id);
+            if (!s) return;
+            
+            currentShipment = s;
+            
+            const html = `
+                <div class="detail-section">
+                    <div class="detail-title">🔢 Tracking Information</div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="detail-label">Tracking Number</div><div class="detail-value" style="font-family:monospace;font-size:18px">${s.trackingNumber}</div></div>
+                        <div class="detail-item"><div class="detail-label">Service</div><div class="detail-value">${serviceMap[s.service].name}</div></div>
+                        <div class="detail-item"><div class="detail-label">Status</div><div class="detail-value">${s.status.toUpperCase()}</div></div>
+                        <div class="detail-item"><div class="detail-label">Current Location</div><div class="detail-value">${s.currentLocation || 'In Transit'}</div></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-title">📤 Sender Details</div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${s.sender.name}</div></div>
+                        <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${s.sender.street}, ${s.sender.city}, ${s.sender.state} ${s.sender.zip}</div></div>
+                        <div class="detail-item"><div class="detail-label">Country</div><div class="detail-value">${countryMap[s.sender.country]}</div></div>
+                        <div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">${s.sender.phone || 'N/A'}<br>${s.sender.email}</div></div>
+                    </div>
+                </div>
+                <div class="detail-section">
+                    <div class="detail-title">📥 Receiver Details</div>
+                    <div class="detail-grid">
+                        <div class="detail-item"><div class="detail-label">Name</div><div class="detail-value">${s.receiver.name}</div></div>
+                        <div class="detail-item"><div class="detail-label">Address</div><div class="detail-value">${s.receiver.street}, ${s.receiver.city}, ${s.receiver.state} ${s.receiver.zip}</div></div>
+                        <div class="detail-item"><div class="detail-label">Country</div><div class="detail-value">${countryMap[s.receiver.country]}</div></div>
+                        <div class="detail-item"><div class="detail-label">Contact</div><div class="detail-value">${s.receiver.phone}<br>${s.receiver.email}</div></div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('viewModalBody').innerHTML = html;
+            document.getElementById('viewModal').classList.add('show');
+        }
+
+        function deleteShipment(id) {
+            if (!confirm('Are you sure you want to delete this shipment?')) return;
+            shipments = shipments.filter(s => s.id !== id);
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            renderShipments();
+            updateStats();
+            showToast('🗑 Shipment deleted');
+        }
+
+        function quickTrack() {
+            const input = document.getElementById('trackInput').value.toUpperCase();
+            const result = document.getElementById('trackResult');
+            
+            if (!input) {
+                result.style.display = 'none';
+                return;
+            }
+            
+            const shipment = shipments.find(s => s.trackingNumber.toUpperCase() === input);
+            
+            if (!shipment) {
+                result.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:#6c757d">
+                        <div style="font-size:48px;margin-bottom:15px">❌</div>
+                        <h3>Tracking Number Not Found</h3>
+                        <p>No shipment found with tracking number: ${input}</p>
+                    </div>
+                `;
+                result.style.display = 'block';
+                return;
+            }
+            
+            currentShipment = shipment;
+            
+            result.innerHTML = `
+                <div class="tracking-item" style="margin-top:20px">
+                    <div class="tracking-header">
+                        <div class="tracking-id">${shipment.trackingNumber}</div>
+                        <span class="tracking-status status-${shipment.status}">${shipment.status.toUpperCase()}</span>
+                    </div>
+                    <div class="tracking-route">
+                        <span>📦 ${shipment.sender.city}, ${shipment.sender.country}</span>
+                        <span class="route-arrow">→</span>
+                        <span>🏠 ${shipment.receiver.city}, ${shipment.receiver.country}</span>
+                    </div>
+                    <div class="tracking-info-grid">
+                        <div class="info-item"><div class="info-label">Service</div><div class="info-value">${serviceMap[shipment.service].name}</div></div>
+                        <div class="info-item"><div class="info-label">Created</div><div class="info-value">${new Date(shipment.dates.created).toLocaleDateString()}</div></div>
+                        <div class="info-item"><div class="info-label">Expected Arrival</div><div class="info-value">${new Date(shipment.dates.expectedArrival).toLocaleDateString()}</div></div>
+                        <div class="info-item"><div class="info-label">Current Location</div><div class="info-value">${shipment.currentLocation || 'In Transit'}</div></div>
+                    </div>
+                    <div class="tracking-actions">
+                        <button class="btn-small view" onclick="viewShipment(${shipment.id})">👁 View Details</button>
+                        <button class="btn-small track" onclick="openLiveTrack(${shipment.id})">🗺️ Live Track</button>
+                    </div>
+                </div>
+            `;
+            result.style.display = 'block';
+        }
+
+        function generateBatch() {
+            const qty = parseInt(document.getElementById('batchQuantity').value);
+            const service = document.getElementById('batchService').value;
+            const country = document.getElementById('batchCountry').value;
+            const packageType = document.getElementById('batchPackageType').value;
+            const customerCare = document.getElementById('batchCustomerCare').value;
+            
+            const generated = [];
+            
+            for (let i = 0; i < qty; i++) {
+                const serial = Math.floor(Math.random() * 900000000) + 100000000;
+                const trackingNumber = `${service}X${serial}${country}`;
+                
+                const shipment = {
+                    id: Date.now() + i,
+                    trackingNumber: trackingNumber,
+                    service: service,
+                    originCountry: country,
+                    serial: serial,
+                    sender: {
+                        name: `Batch Sender ${i+1}`,
+                        city: 'Batch City',
+                        country: country,
+                        coords: countryCenters[country] || [0, 0]
+                    },
+                    receiver: {
+                        name: `Batch Receiver ${i+1}`,
+                        city: 'Destination City',
+                        country: 'US',
+                        coords: countryCenters['US'] || [0, 0]
+                    },
+                    package: {
+                        type: packageType,
+                        method: 'express',
+                        weight: '1.0',
+                        value: '$50.00'
+                    },
+                    dates: {
+                        created: new Date().toISOString(),
+                        expectedArrival: new Date(Date.now() + 7*24*60*60*1000).toISOString()
+                    },
+                    customerCare: {
+                        number: customerCare,
+                        email: 'support@upu.post',
+                        hours: 'Mon-Fri: 8AM - 6PM'
+                    },
+                    status: 'active',
+                    currentLocation: 'Processing Center',
+                    timeline: [
+                        {status: 'Shipment Created', location: 'Processing Center', time: new Date().toISOString(), completed: true, current: true}
+                    ]
+                };
+                
+                shipments.push(shipment);
+                generated.push(shipment);
+            }
+            
+            localStorage.setItem('upu_shipments', JSON.stringify(shipments));
+            
+            // Display results
+            const list = document.getElementById('batchList');
+            list.innerHTML = generated.map(s => `
+                <div class="tracking-item">
+                    <div class="tracking-header">
+                        <div class="tracking-id">${s.trackingNumber}</div>
+                        <span class="tracking-status status-active">ACTIVE</span>
+                    </div>
+                    <div class="tracking-info-grid">
+                        <div class="info-item"><div class="info-label">Service</div><div class="info-value">${serviceMap[s.service].name}</div></div>
+                        <div class="info-item"><div class="info-label">Origin</div><div class="info-value">${countryMap[s.originCountry]}</div></div>
+                        <div class="info-item"><div class="detail-label">Created</div><div class="info-value">${new Date(s.dates.created).toLocaleDateString()}</div></div>
+                    </div>
+                </div>
+            `).join('');
+            
+            document.getElementById('batchResults').style.display = 'block';
+            updateStats();
+            showToast(`✅ ${qty} shipments generated!`);
+        }
+
+        function copyAllBatch() {
+            const numbers = shipments.slice(-parseInt(document.getElementById('batchQuantity').value))
+                .map(s => s.trackingNumber).join('\n');
+            navigator.clipboard.writeText(numbers);
+            showToast('📋 All tracking numbers copied!');
+        }
+
+        function downloadBatchCSV() {
+            const recent = shipments.slice(-parseInt(document.getElementById('batchQuantity').value));
+            let csv = 'Tracking Number,Service,Origin,Destination,Date\n';
+            recent.forEach(s => {
+                csv += `${s.trackingNumber},${serviceMap[s.service].name},${s.sender.city},${s.receiver.city},${new Date(s.dates.created).toLocaleDateString()}\n`;
+            });
+            
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `upu_shipments_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            showToast('💾 CSV downloaded!');
+        }
+
+        function updateStats() {
+            document.getElementById('statTotal').textContent = shipments.length;
+            document.getElementById('statToday').textContent = shipments.filter(s => {
+                const created = new Date(s.dates.created);
+                const today = new Date();
+                return created.toDateString() === today.toDateString();
+            }).length;
+            document.getElementById('statTransit').textContent = shipments.filter(s => s.status === 'transit').length;
+        }
+
+        function updateAnalytics() {
+            const now = new Date();
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+            const monthly = shipments.filter(s => new Date(s.dates.created) >= monthStart);
+            document.getElementById('monthlyCount').textContent = monthly.length;
+            
+            // Top service
+            const serviceCounts = {};
+            shipments.forEach(s => serviceCounts[s.service] = (serviceCounts[s.service] || 0) + 1);
+            const topService = Object.entries(serviceCounts).sort((a,b) => b[1]-a[1])[0];
+            document.getElementById('topService').textContent = topService ? serviceMap[topService[0]].name : '-';
+            
+            // Top route
+            const routeCounts = {};
+            shipments.forEach(s => {
+                const route = `${s.sender.country}→${s.receiver.country}`;
+                routeCounts[route] = (routeCounts[route] || 0) + 1;
+            });
+            const topRoute = Object.entries(routeCounts).sort((a,b) => b[1]-a[1])[0];
+            document.getElementById('topRoute').textContent = topRoute ? topRoute[0] : '-';
+            
+            // Avg weight
+            const weights = shipments.filter(s => s.package.weight).map(s => parseFloat(s.package.weight));
+            const avg = weights.length ? (weights.reduce((a,b) => a+b, 0) / weights.length).toFixed(1) : '-';
+            document.getElementById('avgWeight').textContent = avg + ' kg';
+        }
+
+        function exportData() {
+            const data = JSON.stringify(shipments, null, 2);
+            const blob = new Blob([data], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `upu_data_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            showToast('💾 Data exported!');
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('show');
+        }
+
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        function printShipment() {
+            window.print();
+        }
+
+        // Close modals on escape
+        document.addEventListener('keydown', e => {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('show'));
+            }
+        });
+    </script>
+</body>
+</html>
